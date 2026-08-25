@@ -1,8 +1,435 @@
-/*
+.cribbage-tracker {
+	padding: 24px;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.cribbage-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 24px;
+}
 
-If your plugin does not need CSS, delete this file.
+.cribbage-header h1 {
+	margin: 0;
+}
 
-*/
+.cribbage-game-count {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.cribbage-panel {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: 20px;
+	margin-bottom: 24px;
+}
+
+.cribbage-panel h2 {
+	margin-top: 0;
+}
+
+.cribbage-game-form {
+	display: grid;
+	grid-template-columns:
+		repeat(
+			auto-fit,
+			minmax(150px, 1fr)
+		);
+	gap: 16px;
+	align-items: end;
+}
+
+.cribbage-form-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+
+.cribbage-form-field label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+}
+
+.cribbage-form-field input,
+.cribbage-form-field select {
+	width: 100%;
+	min-width: 0;
+}
+
+.cribbage-form-actions {
+	display: flex;
+	align-items: end;
+}
+
+.cribbage-form-actions button {
+	width: 100%;
+}
+
+.cribbage-table-scroll {
+	width: 100%;
+	overflow-x: auto;
+}
+
+.cribbage-table {
+	width: 100%;
+	border-collapse: collapse;
+	white-space: nowrap;
+}
+
+.cribbage-table th,
+.cribbage-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid
+		var(--background-modifier-border);
+	text-align: left;
+}
+
+.cribbage-table th {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+}
+
+.cribbage-table tbody tr:hover {
+	background: var(--background-modifier-hover);
+}
+
+.cribbage-delete-button {
+	font-size: var(--font-ui-smaller);
+}
+
+.cribbage-empty-state {
+	color: var(--text-muted);
+	margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+	.cribbage-tracker {
+		padding: 12px;
+	}
+
+	.cribbage-panel {
+		padding: 14px;
+	}
+
+	.cribbage-game-form {
+		grid-template-columns: 1fr;
+	}
+}
+
+.cribbage-sort-button {
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	color: inherit;
+	font: inherit;
+	font-weight: var(--font-semibold);
+	padding: 0;
+	cursor: pointer;
+}
+
+.cribbage-sort-button:hover {
+	background: transparent;
+	color: var(--text-normal);
+}
+
+.cribbage-import-panel > summary {
+	cursor: pointer;
+	font-size: var(--h2-size);
+	font-weight: var(--h2-weight);
+}
+
+.cribbage-import-body {
+	margin-top: 20px;
+}
+
+.cribbage-import-grid {
+	display: grid;
+	grid-template-columns:
+		repeat(
+			auto-fit,
+			minmax(180px, 1fr)
+		);
+	gap: 16px;
+	margin-top: 16px;
+	margin-bottom: 12px;
+}
+
+.cribbage-import-summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-bottom: 12px;
+	font-weight: var(--font-semibold);
+}
+
+.cribbage-import-error-text {
+	color: var(--text-error);
+}
+
+.cribbage-import-errors {
+	border-left: 3px solid
+		var(--text-error);
+	padding-left: 12px;
+	margin: 12px 0 16px;
+}
+
+.cribbage-import-errors ul {
+	margin-bottom: 0;
+}
+
+.cribbage-import-actions {
+	margin-top: 16px;
+	display: flex;
+	justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+	.cribbage-import-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.cribbage-import-actions button {
+		width: 100%;
+	}
+}
+
+.cribbage-row-actions {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.cribbage-editing-row {
+	background: var(--background-modifier-hover);
+}
+
+.cribbage-editing-row input,
+.cribbage-editing-row select {
+	min-width: 110px;
+}
+
+.cribbage-editing-row input[type='number'] {
+	min-width: 64px;
+	width: 64px;
+}
+
+.cribbage-edit-score {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+@media (max-width: 600px) {
+	.cribbage-row-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+}
+
+.cribbage-navigation {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 24px;
+}
+
+.cribbage-high-hand-grid,
+.cribbage-add-hand-grid {
+	display: grid;
+	grid-template-columns:
+		repeat(
+			auto-fit,
+			minmax(150px, 1fr)
+		);
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.cribbage-checkbox-row {
+	margin-bottom: 4px;
+}
+
+.cribbage-checkbox-row label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: var(--font-semibold);
+}
+
+.cribbage-hand-summary {
+	display: grid;
+	grid-template-columns:
+		repeat(
+			auto-fit,
+			minmax(170px, 1fr)
+		);
+	gap: 12px;
+	margin-top: 20px;
+}
+
+.cribbage-summary-item {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 12px;
+	background:
+		var(--background-primary);
+	border:
+		1px solid
+		var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.cribbage-summary-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.cribbage-hand-input {
+	min-width: 64px;
+	width: 72px;
+}
+
+.cribbage-last-hand {
+	background:
+		var(--background-modifier-hover);
+}
+
+.cribbage-warning {
+	color: var(--text-warning);
+	font-weight: var(--font-semibold);
+}
+
+@media (max-width: 600px) {
+	.cribbage-navigation {
+		display: grid;
+		grid-template-columns:
+			repeat(3, 1fr);
+	}
+
+	.cribbage-navigation button {
+		width: 100%;
+	}
+
+	.cribbage-high-hand-grid,
+	.cribbage-add-hand-grid,
+	.cribbage-hand-summary {
+		grid-template-columns: 1fr;
+	}
+}
+.cribbage-stat-controls {
+	display: grid;
+	grid-template-columns:
+		repeat(
+			auto-fit,
+			minmax(180px, 1fr)
+		);
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.cribbage-stat-results {
+	margin-top: 20px;
+}
+
+.cribbage-stat-grid {
+	display: grid;
+	grid-template-columns:
+		repeat(
+			auto-fit,
+			minmax(180px, 1fr)
+		);
+	gap: 12px;
+}
+
+.cribbage-stat-card {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+
+	padding: 16px;
+
+	background:
+		var(--background-primary);
+
+	border:
+		1px solid
+		var(--background-modifier-border);
+
+	border-radius:
+		var(--radius-m);
+}
+
+.cribbage-stat-label {
+	color:
+		var(--text-muted);
+
+	font-size:
+		var(--font-ui-small);
+}
+
+.cribbage-stat-value {
+	font-size:
+		1.35em;
+}
+
+.cribbage-stat-table {
+	margin-top: 16px;
+}
+
+.cribbage-hidden {
+	display: none !important;
+}
+
+@media (max-width: 600px) {
+	.cribbage-stat-controls,
+	.cribbage-stat-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.cribbage-par-label {
+	margin-bottom: 3px;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+}
+
+.cribbage-stat-subtext {
+	margin-top: 2px;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.3;
+}
+
+.cribbage-stat-section {
+	margin-top: 28px;
+}
+
+.cribbage-stat-section h3 {
+	margin-bottom: 6px;
+}
+
+.cribbage-above-par {
+	color: var(--text-success) !important;
+}
+
+.cribbage-below-par {
+	color: var(--text-error) !important;
+}
+
+.cribbage-stat-value.cribbage-above-par,
+.cribbage-stat-value.cribbage-below-par {
+	font-weight: var(--font-bold);
+}
+
+input.cribbage-above-par,
+input.cribbage-below-par {
+	font-weight: var(--font-semibold);
+}

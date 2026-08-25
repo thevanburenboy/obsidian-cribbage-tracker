@@ -2,6 +2,10 @@ import type CribbageTrackerPlugin from './main';
 
 import type { GameStatisticsRecord } from './database';
 
+import {
+	renderCustomMetricStatistics,
+} from './custom-metric-statistics';
+
 interface Metric {
 	label: string;
 	value: string;
@@ -338,6 +342,15 @@ function renderGlobalStats(
 
 	renderMetricGrid(container, metrics);
 
+    renderCustomMetricStatistics(
+        container,
+        plugin,
+        games,
+        {
+            type: 'global',
+        },
+    );
+
 	renderHighHandWinTable(
 		container,
 		'Winning % by High Hand',
@@ -360,6 +373,16 @@ function renderPlayerStats(
 	const stats = calculatePlayerStats(games, player, null);
 
 	renderMetricGrid(container, playerMetrics(stats, plugin));
+
+    renderCustomMetricStatistics(
+        container,
+        plugin,
+        games,
+        {
+            type: 'player',
+            player,
+        },
+    );
 
 	renderHighHandWinTable(
 		container,
@@ -575,6 +598,17 @@ function renderMatchupStats(
 			formatNumber(stats2.peggingPerRound),
 		],
 	];
+
+    renderCustomMetricStatistics(
+        container,
+        plugin,
+        games,
+        {
+            type: 'matchup',
+            player1,
+            player2,
+        },
+    );
 
 	renderHighHandWinTable(
 		container,

@@ -2,7 +2,7 @@ import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
 import { normalizePath } from 'obsidian';
 import type CribbageTrackerPlugin from './main';
 
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
 
 export interface GameRecord {
 	id: string;
@@ -106,6 +106,88 @@ export interface GameStatisticsRecord {
 
 	player1PeggingPointsTotal: number;
 	player2PeggingPointsTotal: number;
+}
+
+export type CustomMetricDataSource =
+	'games' | 'hands';
+
+export type CustomMetricCalculationMode =
+	'builder' | 'sql';
+
+export type CustomMetricFormatMode =
+	| 'integer'
+	| 'decimal'
+	| 'percentage'
+	| 'custom';
+
+export type CustomMetricMatchupMode =
+	'combined' | 'per_player';
+
+export interface CustomMetricRecord {
+	id: string;
+	name: string;
+
+	dataSource:
+		CustomMetricDataSource;
+
+	calculationMode:
+		CustomMetricCalculationMode;
+
+	builderFormula: string;
+	sqlQuery: string;
+
+	formatMode:
+		CustomMetricFormatMode;
+
+	decimalPlaces: number;
+
+	prefix: string;
+	suffix: string;
+
+	formatExpression: string;
+
+	showGlobal: boolean;
+	showPlayer: boolean;
+	showMatchup: boolean;
+
+	matchupMode:
+		CustomMetricMatchupMode;
+
+	enabled: boolean;
+	sortOrder: number;
+}
+
+export interface CustomMetricInput {
+	name: string;
+
+	dataSource:
+		CustomMetricDataSource;
+
+	calculationMode:
+		CustomMetricCalculationMode;
+
+	builderFormula: string;
+	sqlQuery: string;
+
+	formatMode:
+		CustomMetricFormatMode;
+
+	decimalPlaces: number;
+
+	prefix: string;
+	suffix: string;
+
+	formatExpression: string;
+
+	showGlobal: boolean;
+	showPlayer: boolean;
+	showMatchup: boolean;
+
+	matchupMode:
+		CustomMetricMatchupMode;
+
+	enabled: boolean;
+	sortOrder: number;
 }
 
 export interface HandInput {
@@ -820,6 +902,247 @@ export class CribbageDatabase {
                 player2High,
                 gameId,
             ],
+        );
+
+        await this.save();
+    }
+
+    listCustomMetrics(): CustomMetricRecord[] {
+        const db = this.requireDb();
+
+        const result = db.exec(`
+            SELECT
+                id,
+                name,
+                data_source,
+                calculation_mode,
+                builder_formula,
+                sql_query,
+                format_mode,
+                decimal_places,
+                prefix,
+                suffix,
+                format_expression,
+                show_global,
+                show_player,
+                show_matchup,
+                matchup_mode,
+                enabled,
+                sort_order
+            FROM custom_metrics
+            ORDER BY
+                sort_order ASC,
+                name COLLATE NOCASE ASC;
+        `);
+
+        const rows =
+            result[0]?.values ?? [];
+
+        return rows.map((row) => ({
+            id: String(row[0]),
+
+            name:
+                String(row[1] ?? ''),
+
+            dataSource:
+                row[2] === 'hands'
+                    ? 'hands'
+                    : 'games',
+
+            calculationMode:
+                row[3] === 'sql'
+                    ? 'sql'
+                    : 'builder',
+
+            builderFormula:
+                String(row[4] ?? ''),
+
+            sqlQuery:
+                String(row[5] ?? ''),
+
+            formatMode:
+                row[6] === 'integer'
+                    ? 'integer'
+                    : row[6] === 'percentage'
+                        ? 'percentage'
+                        : row[6] === 'custom'
+                            ? 'custom'
+                            : 'decimal',
+
+            decimalPlaces:
+                Number(row[7]),
+
+            prefix:
+                String(row[8] ?? ''),
+
+            suffix:
+                String(row[9] ?? ''),
+
+            formatExpression:
+                String(row[10] ?? ''),
+
+            showGlobal:
+                row[11] === 1,
+
+            showPlayer:
+                row[12] === 1,
+
+            showMatchup:
+                row[13] === 1,
+
+            matchupMode:
+                row[14] === 'per_player'
+                    ? 'per_player'
+                    : 'combined',
+
+            enabled:
+                row[15] === 1,
+
+            sortOrder:
+                Number(row[16]),
+        }));
+    }
+
+    async createCustomMetric(
+        input: CustomMetricInput,
+    ): Promise<string> {
+        const db = this.requireDb();
+
+        const id = this.createId();
+
+        db.run(
+            `
+            INSERT INTO custom_metrics (
+                id,
+                name,
+                data_source,
+                calculation_mode,
+                builder_formula,
+                sql_query,
+                format_mode,
+                decimal_places,
+                prefix,
+                suffix,
+                format_expression,
+                show_global,
+                show_player,
+                show_matchup,
+                matchup_mode,
+                enabled,
+                sort_order
+            )
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?
+            );
+            `,
+            [
+                id,
+                input.name.trim(),
+
+                input.dataSource,
+                input.calculationMode,
+
+                input.builderFormula,
+                input.sqlQuery,
+
+                input.formatMode,
+                input.decimalPlaces,
+
+                input.prefix,
+                input.suffix,
+
+                input.formatExpression,
+
+                input.showGlobal ? 1 : 0,
+                input.showPlayer ? 1 : 0,
+                input.showMatchup ? 1 : 0,
+
+                input.matchupMode,
+
+                input.enabled ? 1 : 0,
+                input.sortOrder,
+            ],
+        );
+
+        await this.save();
+
+        return id;
+    }
+
+    async updateCustomMetric(
+        id: string,
+        input: CustomMetricInput,
+    ): Promise<void> {
+        const db = this.requireDb();
+
+        db.run(
+            `
+            UPDATE custom_metrics
+            SET
+                name = ?,
+                data_source = ?,
+                calculation_mode = ?,
+                builder_formula = ?,
+                sql_query = ?,
+                format_mode = ?,
+                decimal_places = ?,
+                prefix = ?,
+                suffix = ?,
+                format_expression = ?,
+                show_global = ?,
+                show_player = ?,
+                show_matchup = ?,
+                matchup_mode = ?,
+                enabled = ?,
+                sort_order = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?;
+            `,
+            [
+                input.name.trim(),
+
+                input.dataSource,
+                input.calculationMode,
+
+                input.builderFormula,
+                input.sqlQuery,
+
+                input.formatMode,
+                input.decimalPlaces,
+
+                input.prefix,
+                input.suffix,
+
+                input.formatExpression,
+
+                input.showGlobal ? 1 : 0,
+                input.showPlayer ? 1 : 0,
+                input.showMatchup ? 1 : 0,
+
+                input.matchupMode,
+
+                input.enabled ? 1 : 0,
+                input.sortOrder,
+
+                id,
+            ],
+        );
+
+        await this.save();
+    }
+
+    async deleteCustomMetric(
+        id: string,
+    ): Promise<void> {
+        const db = this.requireDb();
+
+        db.run(
+            `
+            DELETE FROM custom_metrics
+            WHERE id = ?;
+            `,
+            [id],
         );
 
         await this.save();
@@ -1559,6 +1882,124 @@ export class CribbageDatabase {
                 db.run('COMMIT;');
 
                 version = 3;
+            } catch (error) {
+                db.run('ROLLBACK;');
+                throw error;
+            }
+        }
+
+        if (version < 4) {
+            db.run('BEGIN;');
+
+            try {
+                db.run(`
+                    CREATE TABLE custom_metrics (
+                        id TEXT PRIMARY KEY NOT NULL,
+
+                        name TEXT NOT NULL,
+
+                        data_source TEXT NOT NULL
+                            DEFAULT 'games'
+                            CHECK (
+                                data_source IN (
+                                    'games',
+                                    'hands'
+                                )
+                            ),
+
+                        calculation_mode TEXT NOT NULL
+                            DEFAULT 'builder'
+                            CHECK (
+                                calculation_mode IN (
+                                    'builder',
+                                    'sql'
+                                )
+                            ),
+
+                        builder_formula TEXT,
+                        sql_query TEXT,
+
+                        format_mode TEXT NOT NULL
+                            DEFAULT 'decimal'
+                            CHECK (
+                                format_mode IN (
+                                    'integer',
+                                    'decimal',
+                                    'percentage',
+                                    'custom'
+                                )
+                            ),
+
+                        decimal_places INTEGER NOT NULL
+                            DEFAULT 2
+                            CHECK (
+                                decimal_places >= 0
+                                AND decimal_places <= 12
+                            ),
+
+                        prefix TEXT NOT NULL DEFAULT '',
+                        suffix TEXT NOT NULL DEFAULT '',
+
+                        format_expression TEXT,
+
+                        show_global INTEGER NOT NULL
+                            DEFAULT 1
+                            CHECK (
+                                show_global IN (0, 1)
+                            ),
+
+                        show_player INTEGER NOT NULL
+                            DEFAULT 1
+                            CHECK (
+                                show_player IN (0, 1)
+                            ),
+
+                        show_matchup INTEGER NOT NULL
+                            DEFAULT 1
+                            CHECK (
+                                show_matchup IN (0, 1)
+                            ),
+
+                        matchup_mode TEXT NOT NULL
+                            DEFAULT 'combined'
+                            CHECK (
+                                matchup_mode IN (
+                                    'combined',
+                                    'per_player'
+                                )
+                            ),
+
+                        enabled INTEGER NOT NULL
+                            DEFAULT 1
+                            CHECK (
+                                enabled IN (0, 1)
+                            ),
+
+                        sort_order INTEGER NOT NULL
+                            DEFAULT 0,
+
+                        created_at TEXT NOT NULL
+                            DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TEXT NOT NULL
+                            DEFAULT CURRENT_TIMESTAMP
+                    );
+                `);
+
+                db.run(`
+                    CREATE INDEX
+                        idx_custom_metrics_sort
+                    ON custom_metrics (
+                        enabled DESC,
+                        sort_order ASC,
+                        name COLLATE NOCASE ASC
+                    );
+                `);
+
+                db.run('PRAGMA user_version = 4;');
+                db.run('COMMIT;');
+
+                version = 4;
             } catch (error) {
                 db.run('ROLLBACK;');
                 throw error;

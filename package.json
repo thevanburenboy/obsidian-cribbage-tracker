@@ -15,7 +15,9 @@
 	"devDependencies": {
 		"@eslint/js": "^9.39.4",
 		"@types/node": "^22.15.17",
+		"@types/sql.js": "^1.4.11",
 		"esbuild": "0.25.5",
+		"esbuild-plugin-copy": "^2.1.1",
 		"eslint": "^9.39.4",
 		"eslint-plugin-obsidianmd": "^0.4.0",
 		"globals": "^17.6.0",
@@ -23,5 +25,8 @@
 		"obsidian": "latest",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.59.1"
+	},
+	"dependencies": {
+		"sql.js": "^1.14.2"
 	}
 }

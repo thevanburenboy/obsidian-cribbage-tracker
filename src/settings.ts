@@ -37,9 +37,9 @@ export class CribbageTrackerSettingTab extends PluginSettingTab {
 
         containerEl.empty();
 
-        containerEl.createEl('h2', {
-            text: 'Cribbage Tracker Settings',
-        });
+		new Setting(containerEl)
+			.setName('Configuration')
+			.setHeading();
 
         new Setting(containerEl)
             .setName('Database path')
@@ -74,9 +74,9 @@ export class CribbageTrackerSettingTab extends PluginSettingTab {
 							this.plugin.refreshViews();
 						}),
 				);
-containerEl.createEl('h3', {
-	text: 'Par benchmarks',
-});
+new Setting(containerEl)
+	.setName('Par benchmarks')
+	.setHeading();
 
 containerEl.createEl('p', {
 	text:

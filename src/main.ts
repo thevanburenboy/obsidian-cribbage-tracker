@@ -55,21 +55,21 @@ export default class CribbageTrackerPlugin extends Plugin {
 				new CribbageTrackerView(leaf, this),
 		);
 
-		this.addRibbonIcon(
-			'dice-5',
-			'Open Cribbage Tracker',
-			() => {
-				this.activateView();
-			},
-		);
+        this.addRibbonIcon(
+            'dice-5',
+            'Open cribbage tracker',
+            () => {
+                void this.activateView();
+            },
+        );
 
-		this.addCommand({
-			id: 'open-cribbage-tracker',
-			name: 'Open Cribbage Tracker',
-			callback: () => {
-				this.activateView();
-			},
-		});
+        this.addCommand({
+            id: 'open-cribbage-tracker',
+            name: 'Open',
+            callback: () => {
+                void this.activateView();
+            },
+        });
 
 		this.addSettingTab(
 			new CribbageTrackerSettingTab(
@@ -79,21 +79,20 @@ export default class CribbageTrackerPlugin extends Plugin {
 		);
 	}
 
-	onunload() {
-		this.database?.close();
+    onunload() {
+        this.database?.close();
+    }
 
-		this.app.workspace.detachLeavesOfType(
-			VIEW_TYPE_CRIBBAGE,
-		);
-	}
+    async loadSettings(): Promise<void> {
+        const savedData =
+            (await this.loadData()) as
+                Partial<CribbageTrackerSettings>;
 
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData(),
-		);
-	}
+        this.settings = {
+            ...DEFAULT_SETTINGS,
+            ...savedData,
+        };
+    }
 
 	async saveSettings() {
 		await this.saveData(this.settings);
@@ -134,7 +133,7 @@ export default class CribbageTrackerPlugin extends Plugin {
 			});
 		}
 
-		workspace.revealLeaf(leaf);
+		await workspace.revealLeaf(leaf);
 	}
 }
 
@@ -326,7 +325,7 @@ class CribbageTrackerView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Cribbage Tracker';
+		return 'Cribbage tracker';
 	}
 
 	getIcon(): string {
@@ -351,7 +350,7 @@ class CribbageTrackerView extends ItemView {
             );
 
         header.createEl('h1', {
-            text: 'Cribbage Tracker',
+            text: 'Cribbage tracker',
         });
 
         header.createEl('div', {
@@ -504,7 +503,7 @@ class CribbageTrackerView extends ItemView {
 			container.createDiv('cribbage-panel');
 
 		section.createEl('h2', {
-			text: 'New Game',
+			text: 'New game',
 		});
 
 		const form =
@@ -667,15 +666,17 @@ class CribbageTrackerView extends ItemView {
 
 		const saveButton =
 			actions.createEl('button', {
-				text: 'Add Game',
+				text: 'Add game',
 				type: 'submit',
 				cls: 'mod-cta',
 			});
 
 		form.addEventListener(
 			'submit',
-			async (event) => {
-				event.preventDefault();
+            (event) => {
+                event.preventDefault();
+
+                void (async () => {
 
 				const player1 =
 					player1Input.value.trim();
@@ -688,7 +689,7 @@ class CribbageTrackerView extends ItemView {
 					player2.toLocaleLowerCase()
 				) {
 					new Notice(
-						'Player 1 and Player 2 must be different.',
+						'Player 1 and player 2 must be different.',
 					);
 
 					return;
@@ -754,8 +755,9 @@ class CribbageTrackerView extends ItemView {
 					);
 				} finally {
 					saveButton.disabled = false;
-				}
-			},
+                }
+            })();
+        },
 		);
 	}
 
@@ -951,7 +953,8 @@ class CribbageTrackerView extends ItemView {
 
         deleteButton.addEventListener(
             'click',
-            async () => {
+            () => {
+                void (async () => {
                 const confirmed =
                     window.confirm(
                         `Delete ${game.player1} vs ${game.player2} on ${game.playedDate}?`,
@@ -975,7 +978,8 @@ class CribbageTrackerView extends ItemView {
                         'Could not delete game.',
                     );
                 }
-            },
+            })();
+        },
         );
     }
 
@@ -1293,8 +1297,9 @@ class CribbageTrackerView extends ItemView {
 
         saveButton.addEventListener(
             'click',
-            async () => {
-                const player1 =
+            () => {
+                void (async () => {
+                    const player1 =
                     player1Input.value.trim();
 
                 const player2 =
@@ -1327,7 +1332,7 @@ class CribbageTrackerView extends ItemView {
                     player2.toLocaleLowerCase()
                 ) {
                     new Notice(
-                        'Player 1 and Player 2 must be different.',
+                        'Player 1 and player 2 must be different.',
                     );
 
                     return;
@@ -1423,7 +1428,8 @@ class CribbageTrackerView extends ItemView {
                     saveButton.disabled =
                         false;
                 }
-            },
+            })();
+        },
         );
     }
 

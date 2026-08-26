@@ -53,11 +53,11 @@ class CustomMetricsPage {
 		);
 
 		header.createEl('h2', {
-			text: 'Custom Metrics',
+			text: 'Custom metrics',
 		});
 
 		const newButton = header.createEl('button', {
-			text: '+ New Metric',
+			text: '+ new metric',
 			cls: 'mod-cta',
 		});
 
@@ -88,7 +88,7 @@ class CustomMetricsPage {
 		const panel = this.container.createDiv('cribbage-panel');
 
 		panel.createEl('h3', {
-			text: 'Saved Metrics',
+			text: 'Saved metrics',
 		});
 
 		if (metrics.length === 0) {
@@ -170,23 +170,25 @@ class CustomMetricsPage {
 				cls: 'cribbage-delete-button',
 			});
 
-			remove.addEventListener('click', async () => {
-				if (!window.confirm(`Delete "${metric.name}"?`)) {
-					return;
-				}
+            remove.addEventListener('click', () => {
+                void (async () => {
+                    if (!window.confirm(`Delete "${metric.name}"?`)) {
+                        return;
+                    }
 
-				try {
-					await this.plugin.database.deleteCustomMetric(metric.id);
+                    try {
+                        await this.plugin.database.deleteCustomMetric(metric.id);
 
-					new Notice('Custom metric deleted.');
+                        new Notice('Custom metric deleted.');
 
-					this.render();
-				} catch (error) {
-					console.error(error);
+                        this.render();
+                    } catch (error) {
+                        console.error(error);
 
-					new Notice('Could not delete custom metric.');
-				}
-			});
+                        new Notice('Could not delete custom metric.');
+                    }
+                })();
+            });
 		}
 	}
 
@@ -238,7 +240,7 @@ class CustomMetricsPage {
 		const builderArea = calculationArea.createDiv();
 
 		builderArea.createEl('h4', {
-			text: 'Builder Formula',
+			text: 'Builder formula',
 		});
 
         builderArea.createEl('p', {
@@ -283,7 +285,7 @@ class CustomMetricsPage {
 
         sqlArea.createEl('p', {
             text:
-                'Recommended table: metric_games or metric_hands. It contains one player-perspective row per applicable game (or hand) and is automatically filtered to the current Global, Player, or Matchup preview scope.',
+                'Recommended table: metric_games or metric_hands. It contains one player-perspective row per applicable game (or hand) and is automatically filtered to the current global, player, or matchup preview scope.',
             cls:
                 'setting-item-description',
         });
@@ -319,7 +321,7 @@ class CustomMetricsPage {
             'SELECT COUNT(*) FROM metric_games WHERE high_hand >= 20;';
 
 		panel.createEl('h4', {
-			text: 'Show On',
+			text: 'Show on',
 		});
 
 		const screens = panel.createDiv('cribbage-custom-checkbox-grid');
@@ -353,7 +355,7 @@ class CustomMetricsPage {
 		);
 
 		panel.createEl('h4', {
-			text: 'Display Formatting',
+			text: 'Display formatting',
 		});
 
 		const formatGrid = panel.createDiv('cribbage-custom-metric-grid');
@@ -858,7 +860,8 @@ class CustomMetricsPage {
 			this.render();
 		});
 
-		save.addEventListener('click', async () => {
+        save.addEventListener('click', () => {
+            void (async () => {
 			const metricName = name.value.trim();
 
 			if (!metricName) {
@@ -955,8 +958,9 @@ class CustomMetricsPage {
 				console.error(error);
 
 				new Notice('Could not save custom metric.');
-			}
-		});
+		}
+	})();
+});
 	}
 }
 

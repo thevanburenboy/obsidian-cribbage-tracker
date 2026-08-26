@@ -1855,7 +1855,7 @@ function renderWinningStreakCard(
 		);
 
 	card.createEl('h4', {
-		text: 'Winning Streak',
+		text: 'Winning streak',
 	});
 
 	const rows =

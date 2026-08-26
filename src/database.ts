@@ -620,7 +620,7 @@ export class CribbageDatabase {
                 id,
             ],
         );
-		await this.recalculateGameAggregates(id);
+		this.recalculateGameAggregates(id);
 	}
 
 	async deleteGame(id: string): Promise<void> {
@@ -2617,9 +2617,6 @@ export class CribbageDatabase {
 
         await this.save();
 
-        console.log(
-            `Cribbage Tracker database schema: ${version}`,
-        );
     }
 
 	private requireDb(): Database {

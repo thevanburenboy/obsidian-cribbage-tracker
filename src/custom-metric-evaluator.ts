@@ -4,7 +4,6 @@ import type {
 	CustomMetricSqlContext,
 	CustomMetricSqlObservation,
 	GameStatisticsRecord,
-    CustomMetricDataSource,
     CustomMetricSqlHandObservation,
     HandStatisticsRecord,
 } from './database';

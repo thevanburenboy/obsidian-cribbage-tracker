@@ -24,7 +24,7 @@ export function renderCsvImporter(
 	});
 
 	panel.createEl('summary', {
-		text: 'Import Games from CSV',
+		text: 'Import games from CSV',
 	});
 
 	const body = panel.createDiv(
@@ -58,11 +58,12 @@ export function renderCsvImporter(
 	const previewContainer =
 		body.createDiv();
 
-	fileInput.addEventListener(
-		'change',
-		async () => {
-			const file =
-				fileInput.files?.[0];
+    fileInput.addEventListener(
+        'change',
+        () => {
+            void (async () => {
+                const file =
+                    fileInput.files?.[0];
 
 			if (!file) {
 				return;
@@ -129,8 +130,9 @@ export function renderCsvImporter(
 					'Could not read CSV file.',
 				);
 			}
-		},
-	);
+		})();
+	},
+);
 }
 
 function renderConfiguration(
@@ -489,15 +491,16 @@ function renderPreview(
 		result.games.length === 0 ||
 		result.errors.length > 0;
 
-	importButton.addEventListener(
-		'click',
-		async () => {
-			if (
-				result.games.length === 0 ||
-				result.errors.length > 0
-			) {
-				return;
-			}
+    importButton.addEventListener(
+        'click',
+        () => {
+            void (async () => {
+                if (
+                    result.games.length === 0 ||
+                    result.errors.length > 0
+                ) {
+                    return;
+                }
 
 			const confirmed =
 				window.confirm(
@@ -531,8 +534,9 @@ function renderPreview(
 
 				importButton.disabled = false;
 			}
-		},
-	);
+		})();
+	},
+);
 }
 
 function buildGamesFromCsv(

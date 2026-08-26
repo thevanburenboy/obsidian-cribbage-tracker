@@ -65,7 +65,7 @@ export function renderCustomMetricStatistics(
 		);
 
 	section.createEl('h3', {
-		text: 'Custom Statistics',
+		text: 'Custom statistics',
 	});
 
 	const grid =
@@ -377,22 +377,6 @@ function toEvaluationScope(
 		player1: scope.player1,
 		player2: scope.player2,
 	};
-}
-
-function renderUnavailable(
-	card: HTMLElement,
-	message: string,
-): void {
-	card.createEl('strong', {
-		text: 'Not available yet',
-		cls: 'cribbage-stat-value',
-	});
-
-	card.createEl('span', {
-		text: message,
-		cls:
-			'cribbage-stat-subtext',
-	});
 }
 
 function evaluateCustomMetric(

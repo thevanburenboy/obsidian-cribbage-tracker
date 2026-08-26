@@ -178,7 +178,7 @@ function renderTrackingSettings(
 		);
 
 	panel.createEl('h2', {
-		text: 'Hand Tracking',
+		text: 'Hand tracking',
 	});
 
 	const incompleteRow =
@@ -218,27 +218,29 @@ function renderTrackingSettings(
 
 	incomplete.addEventListener(
 		'change',
-		async () => {
-			try {
-				await plugin.database
-					.setHandDataIncomplete(
-						game.id,
-						incomplete.checked,
-					);
+        () => {
+            void (async () => {
+                try {
+                    await plugin.database
+                        .setHandDataIncomplete(
+                            game.id,
+                            incomplete.checked,
+                        );
 
-				onRefresh();
-			} catch (error) {
-				console.error(error);
+                    onRefresh();
+                } catch (error) {
+                    console.error(error);
 
-				new Notice(
-					'Could not update hand tracking status.',
-				);
-			}
-		},
+                    new Notice(
+                        'Could not update hand tracking status.',
+                    );
+                }
+            })();
+        },
 	);
 
 	panel.createEl('h3', {
-		text: 'Manual High-Hand Override',
+		text: 'Manual high-hand override',
 	});
 
 	panel.createEl('p', {
@@ -268,54 +270,56 @@ function renderTrackingSettings(
 
 	const saveHigh =
 		panel.createEl('button', {
-			text: 'Save High Hands',
+			text: 'Save high hands',
 		});
 
 	saveHigh.addEventListener(
 		'click',
-		async () => {
-			const high1 =
-				parseOptionalNumber(
-					player1High.value,
-				);
+        () => {
+            void (async () => {
+                const high1 =
+                    parseOptionalNumber(
+                        player1High.value,
+                    );
 
-			const high2 =
-				parseOptionalNumber(
-					player2High.value,
-				);
+                const high2 =
+                    parseOptionalNumber(
+                        player2High.value,
+                    );
 
-			if (
-				high1 === undefined ||
-				high2 === undefined
-			) {
-				new Notice(
-					'High hands must be whole numbers of 0 or greater.',
-				);
+                if (
+                    high1 === undefined ||
+                    high2 === undefined
+                ) {
+                    new Notice(
+                        'High hands must be whole numbers of 0 or greater.',
+                    );
 
-				return;
-			}
+                    return;
+                }
 
-			try {
-				await plugin.database
-					.setManualHighHands(
-						game.id,
-						high1,
-						high2,
-					);
+                try {
+                    await plugin.database
+                        .setManualHighHands(
+                            game.id,
+                            high1,
+                            high2,
+                        );
 
-				new Notice(
-					'High-hand overrides saved.',
-				);
+                    new Notice(
+                        'High-hand overrides saved.',
+                    );
 
-				onRefresh();
-			} catch (error) {
-				console.error(error);
+                    onRefresh();
+                } catch (error) {
+                    console.error(error);
 
-				new Notice(
-					'Could not save high hands.',
-				);
-			}
-		},
+                    new Notice(
+                        'Could not save high hands.',
+                    );
+                }
+            })();
+        },
 	);
 
 	const effective1 =
@@ -446,7 +450,7 @@ function renderHands(
 	if (game.firstDealer === null) {
 		panel.createEl('p', {
 			text:
-				'Set the first dealer in the Games page before adding hands.',
+				'Set the first dealer in the "Games" page before adding hands.',
 			cls: 'cribbage-warning',
 		});
 	}
@@ -634,38 +638,40 @@ function renderHandRow(
 
 	save.addEventListener(
 		'click',
-		async () => {
-			const input =
-				readHandInput(
-					player1,
-					player2,
-					crib,
-				);
+        () => {
+            void (async () => {
+                const input =
+                    readHandInput(
+                        player1,
+                        player2,
+                        crib,
+                    );
 
-			if (!input) {
-				return;
-			}
+                if (!input) {
+                    return;
+                }
 
-			try {
-				await plugin.database
-					.updateHand(
-						hand.id,
-						input,
-					);
+                try {
+                    await plugin.database
+                        .updateHand(
+                            hand.id,
+                            input,
+                        );
 
-				new Notice(
-					'Hand updated.',
-				);
+                    new Notice(
+                        'Hand updated.',
+                    );
 
-				onRefresh();
-			} catch (error) {
-				console.error(error);
+                    onRefresh();
+                } catch (error) {
+                    console.error(error);
 
-				new Notice(
-					'Could not update hand.',
-				);
-			}
-		},
+                    new Notice(
+                        'Could not update hand.',
+                    );
+                }
+            })();
+        },
 	);
 
 	const remove =
@@ -677,35 +683,37 @@ function renderHandRow(
 
 	remove.addEventListener(
 		'click',
-		async () => {
-			const confirmed =
-				window.confirm(
-					`Delete hand ${hand.handNumber}?`,
-				);
+        () => {
+            void (async () => {
+                const confirmed =
+                    window.confirm(
+                        `Delete hand ${hand.handNumber}?`,
+                    );
 
-			if (!confirmed) {
-				return;
-			}
+                if (!confirmed) {
+                    return;
+                }
 
-			try {
-				await plugin.database
-					.deleteHand(
-						hand.id,
-					);
+                try {
+                    await plugin.database
+                        .deleteHand(
+                            hand.id,
+                        );
 
-				new Notice(
-					'Hand deleted.',
-				);
+                    new Notice(
+                        'Hand deleted.',
+                    );
 
-				onRefresh();
-			} catch (error) {
-				console.error(error);
+                    onRefresh();
+                } catch (error) {
+                    console.error(error);
 
-				new Notice(
-					'Could not delete hand.',
-				);
-			}
-		},
+                    new Notice(
+                        'Could not delete hand.',
+                    );
+                }
+            })();
+        },
 	);
 }
 
@@ -716,7 +724,7 @@ function renderAddHand(
 	onRefresh: () => void,
 ): void {
 	container.createEl('h3', {
-		text: 'Add Hand',
+		text: 'Add hand',
 	});
 
 	const grid =
@@ -747,7 +755,7 @@ function renderAddHand(
 
 	const add =
 		container.createEl('button', {
-			text: 'Add Hand',
+			text: 'Add hand',
 			cls: 'mod-cta',
 		});
 
@@ -756,40 +764,42 @@ function renderAddHand(
 
 	add.addEventListener(
 		'click',
-		async () => {
-			const input =
-				readHandInput(
-					player1,
-					player2,
-					crib,
-				);
+        () => {
+            void (async () => {
+                const input =
+                    readHandInput(
+                        player1,
+                        player2,
+                        crib,
+                    );
 
-			if (!input) {
-				return;
-			}
+                if (!input) {
+                    return;
+                }
 
-			try {
-				await plugin.database
-					.addHand(
-						game.id,
-						input,
-					);
+                try {
+                    await plugin.database
+                        .addHand(
+                            game.id,
+                            input,
+                        );
 
-				new Notice(
-					'Hand added.',
-				);
+                    new Notice(
+                        'Hand added.',
+                    );
 
-				onRefresh();
-			} catch (error) {
-				console.error(error);
+                    onRefresh();
+                } catch (error) {
+                    console.error(error);
 
-				new Notice(
-					error instanceof Error
-						? error.message
-						: 'Could not add hand.',
-				);
-			}
-		},
+                    new Notice(
+                        error instanceof Error
+                            ? error.message
+                            : 'Could not add hand.',
+                    );
+                }
+            })();
+        },
 	);
 }
 

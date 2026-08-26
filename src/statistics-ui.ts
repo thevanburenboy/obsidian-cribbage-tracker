@@ -1867,14 +1867,6 @@ function sum(
 	return games.reduce((total, game) => total + getValue(game), 0);
 }
 
-function formatRatio(numerator: number, denominator: number): string {
-	if (denominator === 0) {
-		return '—';
-	}
-
-	return formatNumber(numerator / denominator);
-}
-
 function formatNumber(value: number | null): string {
 	if (value === null) {
 		return '—';

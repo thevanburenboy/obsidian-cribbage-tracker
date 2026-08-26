@@ -108,6 +108,29 @@ export interface GameStatisticsRecord {
 	player2PeggingPointsTotal: number;
 }
 
+export interface HandStatisticsRecord {
+	id: string;
+	gameId: string;
+
+	playedDate: string;
+	playedTime: string;
+
+	handNumber: number;
+	isLastHand: boolean;
+
+	player1: string;
+	player2: string;
+
+	firstDealer: 1 | 2;
+
+	player1HandPoints: number | null;
+	player2HandPoints: number | null;
+
+	cribPoints: number | null;
+
+	handDataIncomplete: boolean;
+}
+
 export type CustomMetricDataSource =
 	'games' | 'hands';
 
@@ -188,6 +211,85 @@ export interface CustomMetricInput {
 
 	enabled: boolean;
 	sortOrder: number;
+}
+
+export interface CustomMetricSqlObservation {
+	gameId: string;
+	playedDate: string;
+	playedTime: string;
+
+	player: string;
+	opponent: string;
+	playerSide: 1 | 2;
+
+	score: number | null;
+	opponentScore: number | null;
+
+	margin: number | null;
+	scoreDifferential: number | null;
+
+	won: number | null;
+	lost: number | null;
+
+	highHand: number | null;
+	opponentHighHand: number | null;
+	higherHighHand: number | null;
+
+	dealerFirst: number | null;
+	poneFirst: number | null;
+
+	skunk: number | null;
+	doubleSkunk: number | null;
+
+	handDataComplete: number;
+}
+
+export interface CustomMetricSqlHandObservation {
+	gameId: string;
+	handId: string;
+
+	playedDate: string;
+	playedTime: string;
+
+	player: string;
+	opponent: string;
+
+	playerSide: 1 | 2;
+
+	handNumber: number;
+
+	handPoints: number | null;
+	opponentHandPoints: number | null;
+
+	cribPoints: number | null;
+	roundCribPoints: number | null;
+
+	dealer: number;
+	pone: number;
+
+	lastHand: number;
+	eligibleHand: number;
+
+	handDataComplete: number;
+}
+
+export interface CustomMetricSqlContext {
+	scope:
+		| 'global'
+		| 'player'
+		| 'matchup';
+
+	selectedPlayer: string | null;
+
+	matchupPlayer1: string | null;
+	matchupPlayer2: string | null;
+
+	subjectPlayer: string | null;
+}
+
+export interface CustomMetricSqlResult {
+	value: number | null;
+	error: string | null;
 }
 
 export interface HandInput {
@@ -518,7 +620,7 @@ export class CribbageDatabase {
                 id,
             ],
         );
-		await this.save();
+		await this.recalculateGameAggregates(id);
 	}
 
 	async deleteGame(id: string): Promise<void> {
@@ -1148,6 +1250,399 @@ export class CribbageDatabase {
         await this.save();
     }
 
+    evaluateCustomMetricSql(
+        query: string,
+
+        observations:
+            CustomMetricSqlObservation[],
+
+        handObservations:
+            CustomMetricSqlHandObservation[],
+
+        context:
+            CustomMetricSqlContext,
+    ): CustomMetricSqlResult {
+        const db =
+            this.requireDb();
+
+        if (!this.sql) {
+            return {
+                value: null,
+                error:
+                    'SQL.js is not initialized.',
+            };
+        }
+
+        const exported =
+            db.export();
+
+        const clone =
+            new this.sql.Database(
+                new Uint8Array(
+                    exported,
+                ),
+            );
+
+        try {
+            /*
+            * Scope-aware normalized player/game
+            * observations.
+            *
+            * This is a TEMP table, so it exists only
+            * inside this disposable database clone.
+            */
+            clone.run(`
+                CREATE TEMP TABLE metric_games (
+                    game_id TEXT NOT NULL,
+
+                    played_date TEXT NOT NULL,
+                    played_time TEXT NOT NULL,
+
+                    player TEXT NOT NULL,
+                    opponent TEXT NOT NULL,
+
+                    player_side INTEGER NOT NULL,
+
+                    score REAL,
+                    opponent_score REAL,
+
+                    margin REAL,
+                    score_differential REAL,
+
+                    won INTEGER,
+                    lost INTEGER,
+
+                    high_hand REAL,
+                    opponent_high_hand REAL,
+                    higher_high_hand INTEGER,
+
+                    dealer_first INTEGER,
+                    pone_first INTEGER,
+
+                    skunk INTEGER,
+                    double_skunk INTEGER,
+
+                    hand_data_complete INTEGER
+                        NOT NULL
+                );
+            `);
+
+            /*
+            * Gives advanced SQL access to the current
+            * evaluation context if desired.
+            */
+            clone.run(`
+                CREATE TEMP TABLE metric_context (
+                    scope TEXT NOT NULL,
+
+                    selected_player TEXT,
+
+                    matchup_player_1 TEXT,
+                    matchup_player_2 TEXT,
+
+                    subject_player TEXT
+                );
+            `);
+
+            clone.run(
+                `
+                INSERT INTO metric_context (
+                    scope,
+                    selected_player,
+                    matchup_player_1,
+                    matchup_player_2,
+                    subject_player
+                )
+                VALUES (?, ?, ?, ?, ?);
+                `,
+                [
+                    context.scope,
+                    context.selectedPlayer,
+                    context.matchupPlayer1,
+                    context.matchupPlayer2,
+                    context.subjectPlayer,
+                ],
+            );
+
+            const insert =
+                clone.prepare(`
+                    INSERT INTO metric_games (
+                        game_id,
+
+                        played_date,
+                        played_time,
+
+                        player,
+                        opponent,
+
+                        player_side,
+
+                        score,
+                        opponent_score,
+
+                        margin,
+                        score_differential,
+
+                        won,
+                        lost,
+
+                        high_hand,
+                        opponent_high_hand,
+                        higher_high_hand,
+
+                        dealer_first,
+                        pone_first,
+
+                        skunk,
+                        double_skunk,
+
+                        hand_data_complete
+                    )
+                    VALUES (
+                        ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?,
+                        ?, ?
+                    );
+                `);
+
+            try {
+                for (
+                    const observation
+                    of observations
+                ) {
+                    insert.run([
+                        observation.gameId,
+
+                        observation.playedDate,
+                        observation.playedTime,
+
+                        observation.player,
+                        observation.opponent,
+
+                        observation.playerSide,
+
+                        observation.score,
+                        observation.opponentScore,
+
+                        observation.margin,
+                        observation.scoreDifferential,
+
+                        observation.won,
+                        observation.lost,
+
+                        observation.highHand,
+                        observation.opponentHighHand,
+                        observation.higherHighHand,
+
+                        observation.dealerFirst,
+                        observation.poneFirst,
+
+                        observation.skunk,
+                        observation.doubleSkunk,
+
+                        observation.handDataComplete,
+                    ]);
+                }
+            } finally {
+                insert.free();
+            }
+
+            clone.run(`
+                CREATE TEMP TABLE metric_hands (
+                    game_id TEXT NOT NULL,
+                    hand_id TEXT NOT NULL,
+
+                    played_date TEXT NOT NULL,
+                    played_time TEXT NOT NULL,
+
+                    player TEXT NOT NULL,
+                    opponent TEXT NOT NULL,
+
+                    player_side INTEGER NOT NULL,
+
+                    hand_number INTEGER NOT NULL,
+
+                    hand_points REAL,
+                    opponent_hand_points REAL,
+
+                    crib_points REAL,
+                    round_crib_points REAL,
+
+                    dealer INTEGER NOT NULL,
+                    pone INTEGER NOT NULL,
+
+                    last_hand INTEGER NOT NULL,
+                    eligible_hand INTEGER NOT NULL,
+
+                    hand_data_complete INTEGER NOT NULL
+                );
+            `);
+
+            const handInsert =
+                clone.prepare(`
+                    INSERT INTO metric_hands (
+                        game_id,
+                        hand_id,
+
+                        played_date,
+                        played_time,
+
+                        player,
+                        opponent,
+
+                        player_side,
+
+                        hand_number,
+
+                        hand_points,
+                        opponent_hand_points,
+
+                        crib_points,
+                        round_crib_points,
+
+                        dealer,
+                        pone,
+
+                        last_hand,
+                        eligible_hand,
+
+                        hand_data_complete
+                    )
+                    VALUES (
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, ?, ?
+                    );
+                `);
+
+            try {
+                for (
+                    const observation
+                    of handObservations
+                ) {
+                    handInsert.run([
+                        observation.gameId,
+                        observation.handId,
+
+                        observation.playedDate,
+                        observation.playedTime,
+
+                        observation.player,
+                        observation.opponent,
+
+                        observation.playerSide,
+
+                        observation.handNumber,
+
+                        observation.handPoints,
+                        observation.opponentHandPoints,
+
+                        observation.cribPoints,
+                        observation.roundCribPoints,
+
+                        observation.dealer,
+                        observation.pone,
+
+                        observation.lastHand,
+                        observation.eligibleHand,
+
+                        observation.handDataComplete,
+                    ]);
+                }
+            } finally {
+                handInsert.free();
+            }
+
+            const statement =
+                clone.prepare(query);
+
+            try {
+                if (!statement.step()) {
+                    return {
+                        value: null,
+                        error:
+                            'SQL query returned no rows. A custom metric must return exactly one row and one numeric column.',
+                    };
+                }
+
+                const columns =
+                    statement.getColumnNames();
+
+                if (
+                    columns.length !== 1
+                ) {
+                    return {
+                        value: null,
+                        error:
+                            `SQL query returned ${columns.length} columns. A custom metric must return exactly one column.`,
+                    };
+                }
+
+                const row =
+                    statement.get();
+
+                const raw =
+                    row[0] ?? null;
+
+                /*
+                * Check for another row before returning.
+                */
+                if (statement.step()) {
+                    return {
+                        value: null,
+                        error:
+                            'SQL query returned more than one row. A custom metric must return exactly one row.',
+                    };
+                }
+
+                if (raw === null) {
+                    return {
+                        value: null,
+                        error: null,
+                    };
+                }
+
+                if (
+                    typeof raw !== 'number'
+                ) {
+                    return {
+                        value: null,
+                        error:
+                            'SQL query did not return a numeric value.',
+                    };
+                }
+
+                if (
+                    !Number.isFinite(raw)
+                ) {
+                    return {
+                        value: null,
+                        error:
+                            'SQL query returned a non-finite number.',
+                    };
+                }
+
+                return {
+                    value: raw,
+                    error: null,
+                };
+            } finally {
+                statement.free();
+            }
+        } catch (error) {
+            return {
+                value: null,
+
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : 'Advanced SQL evaluation failed.',
+            };
+        } finally {
+            clone.close();
+        }
+    }
+
     getGameHandSummary(
         gameId: string,
     ): GameHandSummary {
@@ -1371,6 +1866,120 @@ export class CribbageDatabase {
             playedTime:
                 String(row[22]),
         }));
+    }
+
+    listHandsForStatistics():
+        HandStatisticsRecord[] {
+        const db = this.requireDb();
+
+        const result = db.exec(`
+            SELECT
+                h.id,
+                h.game_id,
+
+                g.played_date,
+                g.played_time,
+
+                h.hand_number,
+
+                CASE
+                    WHEN h.hand_number = (
+                        SELECT MAX(h2.hand_number)
+                        FROM hands h2
+                        WHERE h2.game_id = h.game_id
+                    )
+                    THEN 1
+                    ELSE 0
+                END,
+
+                g.player_1,
+                g.player_2,
+
+                g.first_dealer,
+
+                h.player_1_hand_points,
+                h.player_2_hand_points,
+
+                h.crib_points,
+
+                g.hand_data_incomplete
+
+            FROM hands h
+
+            INNER JOIN games g
+                ON g.id = h.game_id
+
+            ORDER BY
+                g.played_date ASC,
+                g.played_time ASC,
+                h.hand_number ASC;
+        `);
+
+        const rows =
+            result[0]?.values ?? [];
+
+        return rows.flatMap((row) => {
+            const firstDealer =
+                row[8] === 1
+                    ? 1
+                    : row[8] === 2
+                        ? 2
+                        : null;
+
+            /*
+            * Hands should only exist when the
+            * first dealer is known.
+            */
+            if (firstDealer === null) {
+                return [];
+            }
+
+            return [{
+                id:
+                    String(row[0]),
+
+                gameId:
+                    String(row[1]),
+
+                playedDate:
+                    String(row[2]),
+
+                playedTime:
+                    String(row[3]),
+
+                handNumber:
+                    Number(row[4]),
+
+                isLastHand:
+                    row[5] === 1,
+
+                player1:
+                    String(row[6] ?? ''),
+
+                player2:
+                    String(row[7] ?? ''),
+
+                firstDealer,
+
+                player1HandPoints:
+                    typeof row[9] === 'number'
+                        ? row[9]
+                        : null,
+
+                player2HandPoints:
+                    typeof row[10] === 'number'
+                        ? row[10]
+                        : null,
+
+                cribPoints:
+                    typeof row[11] === 'number'
+                        ? row[11]
+                        : null,
+
+                handDataIncomplete:
+                    row[12] === 1,
+            }];
+        });
     }
 
     private recalculateGameAggregates(

@@ -4,13 +4,20 @@ import type CribbageTrackerPlugin
 import type {
 	CustomMetricRecord,
 	GameStatisticsRecord,
+    HandStatisticsRecord,
 } from './database';
 
 import {
 	evaluateBuilderMetric,
+	evaluateSqlMetric,
 	formatMetricResult,
+    evaluateHandsBuilderMetric,
 	type MetricEvaluationScope,
 } from './custom-metric-evaluator';
+
+import {
+	evaluateCustomFormat,
+} from './custom-metric-formatter';
 
 export type CustomMetricStatisticsScope =
 	| {
@@ -44,6 +51,10 @@ export function renderCustomMetricStatistics(
 					),
 			);
 
+    const hands =
+        plugin.database
+            .listHandsForStatistics();
+
 	if (metrics.length === 0) {
 		return;
 	}
@@ -65,8 +76,10 @@ export function renderCustomMetricStatistics(
 	for (const metric of metrics) {
 		renderMetric(
 			grid,
+            plugin,
 			metric,
 			games,
+            hands,
 			scope,
 		);
 	}
@@ -74,8 +87,10 @@ export function renderCustomMetricStatistics(
 
 function renderMetric(
 	container: HTMLElement,
+    plugin: CribbageTrackerPlugin,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
+    hands: HandStatisticsRecord[],
 	scope: CustomMetricStatisticsScope,
 ): void {
 	const card =
@@ -88,26 +103,6 @@ function renderMetric(
 		cls: 'cribbage-stat-label',
 	});
 
-	if (metric.dataSource !== 'games') {
-		renderUnavailable(
-			card,
-			'Hands metrics are not implemented yet.',
-		);
-
-		return;
-	}
-
-	if (
-		metric.calculationMode === 'sql'
-	) {
-		renderUnavailable(
-			card,
-			'Advanced SQL evaluation is coming next.',
-		);
-
-		return;
-	}
-
 	if (
 		scope.type === 'matchup' &&
 		metric.matchupMode ===
@@ -115,8 +110,10 @@ function renderMetric(
 	) {
 		renderPerPlayerMatchup(
 			card,
+            plugin,
 			metric,
 			games,
+            hands,
 			scope.player1,
 			scope.player2,
 		);
@@ -131,22 +128,28 @@ function renderMetric(
 
 	renderSingleResult(
 		card,
+        plugin,
 		metric,
 		games,
+        hands,
 		evaluationScope,
 	);
 }
 
 function renderSingleResult(
 	card: HTMLElement,
+	plugin: CribbageTrackerPlugin,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
+    hands: HandStatisticsRecord[],
 	scope: MetricEvaluationScope,
 ): void {
 	const result =
-		evaluateBuilderMetric(
-			metric.builderFormula,
+		evaluateCustomMetric(
+			plugin,
+			metric,
 			games,
+            hands,
 			scope,
 		);
 
@@ -166,36 +169,61 @@ function renderSingleResult(
 		return;
 	}
 
-	const formatted =
-		formatMetricResult(
-			result.value,
-			metric.formatMode,
-			metric.decimalPlaces,
-			metric.prefix,
-			metric.suffix,
-		);
+    if (
+        metric.formatMode === 'custom'
+    ) {
+        const custom =
+            evaluateCustomFormat(
+                result.value,
+                metric.formatExpression,
+                metric.prefix,
+                metric.suffix,
+            );
 
-	card.createEl('strong', {
-		text: formatted,
-		cls: 'cribbage-stat-value',
-	});
+        if (custom.error) {
+            card.createEl('strong', {
+                text: 'Format error',
+                cls:
+                    'cribbage-stat-value cribbage-preview-error',
+            });
 
-	if (
-		metric.formatMode === 'custom'
-	) {
-		card.createEl('span', {
-			text:
-				'Custom formatter not yet applied; showing raw value.',
-			cls:
-				'cribbage-stat-subtext',
-		});
-	}
+            card.createEl('span', {
+                text: custom.error,
+                cls:
+                    'cribbage-stat-subtext',
+            });
+
+            return;
+        }
+
+        card.createEl('strong', {
+            text: custom.text,
+            cls:
+                'cribbage-stat-value',
+        });
+
+        return;
+    }
+
+    card.createEl('strong', {
+        text:
+            formatMetricResult(
+                result.value,
+                metric.formatMode,
+                metric.decimalPlaces,
+                metric.prefix,
+                metric.suffix,
+            ),
+        cls: 'cribbage-stat-value',
+    });
 }
 
 function renderPerPlayerMatchup(
 	card: HTMLElement,
+	plugin: CribbageTrackerPlugin,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
+    hands: HandStatisticsRecord[],
 	player1: string,
 	player2: string,
 ): void {
@@ -206,8 +234,10 @@ function renderPerPlayerMatchup(
 
 	renderPlayerResult(
 		values,
+		plugin,
 		metric,
 		games,
+        hands,
 		player1,
 		player1,
 		player2,
@@ -215,8 +245,10 @@ function renderPerPlayerMatchup(
 
 	renderPlayerResult(
 		values,
+        plugin,
 		metric,
 		games,
+        hands,
 		player2,
 		player1,
 		player2,
@@ -225,8 +257,10 @@ function renderPerPlayerMatchup(
 
 function renderPlayerResult(
 	container: HTMLElement,
+	plugin: CribbageTrackerPlugin,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
+    hands: HandStatisticsRecord[],
 	subject: string,
 	player1: string,
 	player2: string,
@@ -243,9 +277,11 @@ function renderPlayerResult(
 	});
 
 	const result =
-		evaluateBuilderMetric(
-			metric.builderFormula,
+		evaluateCustomMetric(
+			plugin,
+			metric,
 			games,
+            hands,
 			{
 				type: 'matchup',
 				player1,
@@ -264,16 +300,45 @@ function renderPlayerResult(
 		return;
 	}
 
-	row.createEl('strong', {
-		text:
-			formatMetricResult(
-				result.value,
-				metric.formatMode,
-				metric.decimalPlaces,
-				metric.prefix,
-				metric.suffix,
-			),
-	});
+    if (
+        metric.formatMode === 'custom'
+    ) {
+        const custom =
+            evaluateCustomFormat(
+                result.value,
+                metric.formatExpression,
+                metric.prefix,
+                metric.suffix,
+            );
+
+        if (custom.error) {
+            row.createEl('strong', {
+                text:
+                    'Format error',
+                cls:
+                    'cribbage-preview-error',
+            });
+
+            return;
+        }
+
+        row.createEl('strong', {
+            text: custom.text,
+        });
+
+        return;
+    }
+
+    row.createEl('strong', {
+        text:
+            formatMetricResult(
+                result.value,
+                metric.formatMode,
+                metric.decimalPlaces,
+                metric.prefix,
+                metric.suffix,
+            ),
+    });
 }
 
 function metricAppliesToScope(
@@ -328,4 +393,44 @@ function renderUnavailable(
 		cls:
 			'cribbage-stat-subtext',
 	});
+}
+
+function evaluateCustomMetric(
+	plugin: CribbageTrackerPlugin,
+	metric: CustomMetricRecord,
+
+	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
+
+	scope: MetricEvaluationScope,
+) {
+	if (
+		metric.calculationMode ===
+		'sql'
+	) {
+		return evaluateSqlMetric(
+			plugin.database,
+			metric.sqlQuery,
+			games,
+			hands,
+			scope,
+		);
+	}
+
+	if (
+		metric.dataSource ===
+		'hands'
+	) {
+		return evaluateHandsBuilderMetric(
+			metric.builderFormula,
+			hands,
+			scope,
+		);
+	}
+
+	return evaluateBuilderMetric(
+		metric.builderFormula,
+		games,
+		scope,
+	);
 }

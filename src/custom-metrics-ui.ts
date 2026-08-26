@@ -13,8 +13,15 @@ import type {
 
 import {
 	evaluateBuilderMetric,
+	evaluateHandsBuilderMetric,
+	evaluateSqlMetric,
 	formatMetricResult,
+	type MetricEvaluationScope,
 } from './custom-metric-evaluator';
+
+import {
+	evaluateCustomFormat,
+} from './custom-metric-formatter';
 
 export function renderCustomMetricsPage(
 	container: HTMLElement,
@@ -197,7 +204,16 @@ class CustomMetricsPage {
 		const dataSource = createSelectField(
 			grid,
 			'Data source',
-			[['games', 'Games']],
+            [
+                [
+                    'games',
+                    'Games',
+                ],
+                [
+                    'hands',
+                    'Hands',
+                ],
+            ],
 			metric?.dataSource ?? 'games',
 		);
 
@@ -227,7 +243,14 @@ class CustomMetricsPage {
 
         builderArea.createEl('p', {
             text:
-                'Fields: Score, OpponentScore, Margin, ScoreDifferential, Won, Lost, HighHand, OpponentHighHand, HigherHighHand, DealerFirst, PoneFirst, Skunk, DoubleSkunk, HandDataComplete.',
+                'Games fields: Score, OpponentScore, Margin, ScoreDifferential, Won, Lost, HighHand, OpponentHighHand, HigherHighHand, DealerFirst, PoneFirst, Skunk, DoubleSkunk, HandDataComplete.',
+            cls:
+                'setting-item-description',
+        });
+
+        builderArea.createEl('p', {
+            text:
+                'Hands fields: HandPoints, OpponentHandPoints, CribPoints, RoundCribPoints, HandNumber, Dealer, Pone, LastHand, EligibleHand, HandDataComplete.',
             cls:
                 'setting-item-description',
         });
@@ -258,13 +281,42 @@ class CustomMetricsPage {
 			cls: 'cribbage-custom-warning',
 		});
 
+        sqlArea.createEl('p', {
+            text:
+                'Recommended table: metric_games or metric_hands. It contains one player-perspective row per applicable game (or hand) and is automatically filtered to the current Global, Player, or Matchup preview scope.',
+            cls:
+                'setting-item-description',
+        });
+
+        sqlArea.createEl('p', {
+            text:
+                'metric_games columns: game_id, played_date, played_time, player, opponent, player_side, score, opponent_score, margin, score_differential, won, lost, high_hand, opponent_high_hand, higher_high_hand, dealer_first, pone_first, skunk, double_skunk, hand_data_complete.',
+            cls:
+                'setting-item-description',
+        });
+
+        sqlArea.createEl('p', {
+            text:
+                'metric_hands columns: game_id, hand_id, played_date, played_time, player, opponent, player_side, hand_number, hand_points, opponent_hand_points, crib_points, round_crib_points, dealer, pone, last_hand, eligible_hand, hand_data_complete.',
+            cls:
+                'setting-item-description',
+        });
+
+        sqlArea.createEl('p', {
+            text:
+                'The single-row metric_context table also exposes: scope, selected_player, matchup_player_1, matchup_player_2, subject_player.',
+            cls:
+                'setting-item-description',
+        });
+
 		const sqlQuery = sqlArea.createEl('textarea', {
 			cls: 'cribbage-custom-textarea cribbage-custom-sql',
 		});
 
 		sqlQuery.value = metric?.sqlQuery ?? '';
 
-		sqlQuery.placeholder = 'SELECT ...';
+        sqlQuery.placeholder =
+            'SELECT COUNT(*) FROM metric_games WHERE high_hand >= 20;';
 
 		panel.createEl('h4', {
 			text: 'Show On',
@@ -351,8 +403,15 @@ class CustomMetricsPage {
 
 		formatExpression.value = metric?.formatExpression ?? '';
 
-		formatExpression.placeholder =
-			'Example: IF(VALUE >= 10, FIXED(VALUE, 2) + "%", INTEGER(VALUE))';
+        formatExpression.placeholder =
+            'Example: IF(VALUE >= 10, "🔥 " + FIXED(VALUE, 3), INTEGER(VALUE) + "x")';
+
+        customFormatArea.createEl('p', {
+            text:
+                'VALUE is the raw numeric metric result. Functions: IF, ROUND, FIXED, INTEGER, PERCENT, ABS, MIN, MAX. Strings may use single or double quotes. Operators: +, -, *, /, comparisons, AND, OR, NOT.',
+            cls:
+                'setting-item-description',
+        });
 
 		const order = createNumberField(
 			formatGrid,
@@ -440,27 +499,29 @@ class CustomMetricsPage {
         const updatePreview = () => {
             previewResults.empty();
 
-            if (
-                calculationMode.value ===
-                'sql'
-            ) {
-                previewResults.createEl('p', {
-                    text:
-                        'Advanced SQL evaluation is coming in the next pass.',
-                    cls:
-                        'setting-item-description',
-                });
+            const games =
+                this.plugin.database
+                    .listGamesForStatistics();
 
-                return;
-            }
+            const hands =
+                this.plugin.database
+                    .listHandsForStatistics();
+
+            const useSql =
+                calculationMode.value ===
+                'sql';
 
             const formula =
-                builderFormula.value.trim();
+                useSql
+                    ? sqlQuery.value.trim()
+                    : builderFormula.value.trim();
 
             if (!formula) {
                 previewResults.createEl('p', {
                     text:
-                        'Enter a builder formula to preview it.',
+                        useSql
+                            ? 'Enter an SQL query to preview it.'
+                            : 'Enter a builder formula to preview it.',
                     cls:
                         'setting-item-description',
                 });
@@ -468,9 +529,36 @@ class CustomMetricsPage {
                 return;
             }
 
-            const games =
-                this.plugin.database
-                    .listGamesForStatistics();
+            const evaluate = (
+                scope: MetricEvaluationScope,
+            ) => {
+                if (useSql) {
+                    return evaluateSqlMetric(
+                        this.plugin.database,
+                        formula,
+                        games,
+                        hands,
+                        scope,
+                    );
+                }
+
+                if (
+                    dataSource.value ===
+                    'hands'
+                ) {
+                    return evaluateHandsBuilderMetric(
+                        formula,
+                        hands,
+                        scope,
+                    );
+                }
+
+                return evaluateBuilderMetric(
+                    formula,
+                    games,
+                    scope,
+                );
+            };
 
             const renderResult = (
                 label: string,
@@ -483,8 +571,18 @@ class CustomMetricsPage {
                         'cribbage-custom-preview-row',
                     );
 
-                row.createEl('span', {
+                const labelArea =
+                    row.createDiv();
+
+                labelArea.createEl('span', {
                     text: label,
+                });
+
+                labelArea.createEl('div', {
+                    text:
+                        `${result.observationCount} scoped observations`,
+                    cls:
+                        'cribbage-custom-preview-count',
                 });
 
                 if (result.error) {
@@ -498,18 +596,63 @@ class CustomMetricsPage {
                     return;
                 }
 
+                if (
+                    formatMode.value ===
+                    'custom'
+                ) {
+                    const custom =
+                        evaluateCustomFormat(
+                            result.value,
+                            formatExpression.value,
+                            prefix.value,
+                            suffix.value,
+                        );
+
+                    if (custom.error) {
+                        row.createEl('strong', {
+                            text:
+                                `Format error: ${custom.error}`,
+                            cls:
+                                'cribbage-preview-error',
+                        });
+
+                        return;
+                    }
+
+                    const valueArea =
+                        row.createDiv(
+                            'cribbage-custom-preview-value',
+                        );
+
+                    valueArea.createEl('strong', {
+                        text: custom.text,
+                    });
+
+                    valueArea.createEl('div', {
+                        text:
+                            `Raw: ${
+                                result.value === null
+                                    ? 'NULL'
+                                    : String(
+                                            result.value,
+                                        )
+                            }`,
+                        cls:
+                            'cribbage-custom-preview-count',
+                    });
+
+                    return;
+                }
+
                 row.createEl('strong', {
                     text:
                         formatMetricResult(
                             result.value,
-
                             formatMode.value as
                                 CustomMetricFormatMode,
-
                             Number(
                                 decimalPlaces.value,
                             ) || 0,
-
                             prefix.value,
                             suffix.value,
                         ),
@@ -518,13 +661,9 @@ class CustomMetricsPage {
 
             renderResult(
                 'Global',
-                evaluateBuilderMetric(
-                    formula,
-                    games,
-                    {
-                        type: 'global',
-                    },
-                ),
+                evaluate({
+                    type: 'global',
+                }),
             );
 
             if (
@@ -534,15 +673,12 @@ class CustomMetricsPage {
                 renderResult(
                     `Player — ${previewPlayer.value}`,
 
-                    evaluateBuilderMetric(
-                        formula,
-                        games,
-                        {
-                            type: 'player',
-                            player:
-                                previewPlayer.value,
-                        },
-                    ),
+                    evaluate({
+                        type: 'player',
+
+                        player:
+                            previewPlayer.value,
+                    }),
                 );
             }
 
@@ -571,71 +707,63 @@ class CustomMetricsPage {
                         cls:
                             'cribbage-preview-error',
                     });
-                } else if (
+
+                    return;
+                }
+
+                if (
                     matchupMode.value ===
                     'combined'
                 ) {
                     renderResult(
                         `${previewMatchup1.value} vs ${previewMatchup2.value}`,
 
-                        evaluateBuilderMetric(
-                            formula,
-                            games,
-                            {
-                                type:
-                                    'matchup',
+                        evaluate({
+                            type:
+                                'matchup',
 
-                                player1:
-                                    previewMatchup1.value,
+                            player1:
+                                previewMatchup1.value,
 
-                                player2:
-                                    previewMatchup2.value,
-                            },
-                        ),
+                            player2:
+                                previewMatchup2.value,
+                        }),
                     );
                 } else {
                     renderResult(
                         `${previewMatchup1.value} vs ${previewMatchup2.value} — ${previewMatchup1.value}`,
 
-                        evaluateBuilderMetric(
-                            formula,
-                            games,
-                            {
-                                type:
-                                    'matchup',
+                        evaluate({
+                            type:
+                                'matchup',
 
-                                player1:
-                                    previewMatchup1.value,
+                            player1:
+                                previewMatchup1.value,
 
-                                player2:
-                                    previewMatchup2.value,
+                            player2:
+                                previewMatchup2.value,
 
-                                subject:
-                                    previewMatchup1.value,
-                            },
-                        ),
+                            subject:
+                                previewMatchup1.value,
+                        }),
                     );
 
                     renderResult(
                         `${previewMatchup1.value} vs ${previewMatchup2.value} — ${previewMatchup2.value}`,
 
-                        evaluateBuilderMetric(
-                            formula,
-                            games,
-                            {
-                                type:
-                                    'matchup',
+                        evaluate({
+                            type:
+                                'matchup',
 
-                                player1:
-                                    previewMatchup1.value,
+                            player1:
+                                previewMatchup1.value,
 
-                                player2:
-                                    previewMatchup2.value,
+                            player2:
+                                previewMatchup2.value,
 
-                                subject:
-                                    previewMatchup2.value,
-                            },
-                        ),
+                            subject:
+                                previewMatchup2.value,
+                        }),
                     );
                 }
             }
@@ -654,7 +782,8 @@ class CustomMetricsPage {
 			);
 
             decimalPlaces.disabled =
-                formatMode.value === 'integer';
+                formatMode.value === 'integer' ||
+                formatMode.value === 'custom';
 
 			matchupMode.parentElement?.toggleClass(
 				'cribbage-hidden',
@@ -670,11 +799,14 @@ class CustomMetricsPage {
 
         for (const element of [
             builderFormula,
+            sqlQuery,
+            dataSource,
             calculationMode,
             formatMode,
             decimalPlaces,
             prefix,
             suffix,
+            formatExpression,
             matchupMode,
         ]) {
             element.addEventListener(

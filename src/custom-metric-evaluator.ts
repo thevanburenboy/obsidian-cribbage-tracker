@@ -1,6 +1,12 @@
 import type {
+	CribbageDatabase,
 	CustomMetricFormatMode,
+	CustomMetricSqlContext,
+	CustomMetricSqlObservation,
 	GameStatisticsRecord,
+    CustomMetricDataSource,
+    CustomMetricSqlHandObservation,
+    HandStatisticsRecord,
 } from './database';
 
 type ObservationValue =
@@ -29,6 +35,25 @@ const GAME_FIELDS =
 		'PONEFIRST',
 		'SKUNK',
 		'DOUBLESKUNK',
+		'HANDDATACOMPLETE',
+	]);
+
+const HAND_FIELDS =
+	new Set([
+		'HANDPOINTS',
+		'OPPONENTHANDPOINTS',
+
+		'CRIBPOINTS',
+		'ROUNDCRIBPOINTS',
+
+		'HANDNUMBER',
+
+		'DEALER',
+		'PONE',
+
+		'LASTHAND',
+		'ELIGIBLEHAND',
+
 		'HANDDATACOMPLETE',
 	]);
 
@@ -90,11 +115,12 @@ export function evaluateBuilderMetric(
 		const tokens =
 			tokenize(formula);
 
-		const parser =
-			new FormulaParser(
-				tokens,
-				observations,
-			);
+        const parser =
+            new FormulaParser(
+                tokens,
+                observations,
+                GAME_FIELDS,
+            );
 
 		const value =
 			parser.parse();
@@ -127,6 +153,125 @@ export function evaluateBuilderMetric(
 				observations.length,
 		};
 	}
+}
+
+export function evaluateHandsBuilderMetric(
+	formula: string,
+	hands: HandStatisticsRecord[],
+	scope: MetricEvaluationScope,
+): MetricEvaluationResult {
+	const observations =
+		buildHandObservations(
+			hands,
+			scope,
+		);
+
+	if (!formula.trim()) {
+		return {
+			value: null,
+			error:
+				'Formula is empty.',
+
+			observationCount:
+				observations.length,
+		};
+	}
+
+	try {
+		const tokens =
+			tokenize(formula);
+
+		const parser =
+			new FormulaParser(
+				tokens,
+				observations,
+				HAND_FIELDS,
+			);
+
+		const value =
+			parser.parse();
+
+		if (
+			value !== null &&
+			!Number.isFinite(value)
+		) {
+			throw new Error(
+				'Formula did not return a finite number.',
+			);
+		}
+
+		return {
+			value,
+			error: null,
+
+			observationCount:
+				observations.length,
+		};
+	} catch (error) {
+		return {
+			value: null,
+
+			error:
+				error instanceof Error
+					? error.message
+					: 'Hands formula evaluation failed.',
+
+			observationCount:
+				observations.length,
+		};
+	}
+}
+
+export function evaluateSqlMetric(
+	database: CribbageDatabase,
+	query: string,
+
+	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
+
+	scope: MetricEvaluationScope,
+): MetricEvaluationResult {
+	if (!query.trim()) {
+		return {
+			value: null,
+			error:
+				'SQL query is empty.',
+			observationCount: 0,
+		};
+	}
+
+	const observations =
+		buildSqlMetricObservations(
+			games,
+			scope,
+		);
+
+    const handObservations =
+        buildSqlHandObservations(
+            hands,
+            scope,
+        );
+
+	const context =
+		buildSqlContext(
+			scope,
+		);
+
+	const result =
+        database.evaluateCustomMetricSql(
+            query,
+            observations,
+            handObservations,
+            context,
+        );
+
+	return {
+		value: result.value,
+		error: result.error,
+
+		observationCount:
+			observations.length,
+	};
 }
 
 export function formatMetricResult(
@@ -231,6 +376,551 @@ function buildGameObservations(
 	}
 
 	return observations;
+}
+
+function buildHandObservations(
+	hands: HandStatisticsRecord[],
+	scope: MetricEvaluationScope,
+): GameObservation[] {
+	const observations:
+		GameObservation[] = [];
+
+	for (const hand of hands) {
+		if (
+			scope.type ===
+				'matchup' &&
+			!handContainsPlayers(
+				hand,
+				scope.player1,
+				scope.player2,
+			)
+		) {
+			continue;
+		}
+
+		for (
+			const side of [1, 2] as const
+		) {
+			const player =
+				side === 1
+					? hand.player1
+					: hand.player2;
+
+			if (
+				scope.type ===
+					'player' &&
+				player !== scope.player
+			) {
+				continue;
+			}
+
+			if (
+				scope.type ===
+					'matchup' &&
+				scope.subject &&
+				player !==
+					scope.subject
+			) {
+				continue;
+			}
+
+			const dealer =
+				getHandDealer(
+					hand.firstDealer,
+					hand.handNumber,
+				);
+
+			const isDealer =
+				dealer === side;
+
+			const handPoints =
+				side === 1
+					? hand.player1HandPoints
+					: hand.player2HandPoints;
+
+			const opponentHandPoints =
+				side === 1
+					? hand.player2HandPoints
+					: hand.player1HandPoints;
+
+			observations.push({
+				HANDPOINTS:
+					handPoints,
+
+				OPPONENTHANDPOINTS:
+					opponentHandPoints,
+
+				CRIBPOINTS:
+					isDealer
+						? hand.cribPoints
+						: null,
+
+				ROUNDCRIBPOINTS:
+					hand.cribPoints,
+
+				HANDNUMBER:
+					hand.handNumber,
+
+				DEALER:
+					isDealer,
+
+				PONE:
+					!isDealer,
+
+				LASTHAND:
+					hand.isLastHand,
+
+				ELIGIBLEHAND:
+					!hand.isLastHand,
+
+				HANDDATACOMPLETE:
+					!hand
+						.handDataIncomplete,
+			});
+		}
+	}
+
+	return observations;
+}
+
+function buildSqlMetricObservations(
+	games: GameStatisticsRecord[],
+	scope: MetricEvaluationScope,
+): CustomMetricSqlObservation[] {
+	const observations:
+		CustomMetricSqlObservation[] = [];
+
+	for (const game of games) {
+		if (
+			scope.type === 'matchup' &&
+			!gameContainsPlayers(
+				game,
+				scope.player1,
+				scope.player2,
+			)
+		) {
+			continue;
+		}
+
+		for (
+			const side of [1, 2] as const
+		) {
+			const player =
+				side === 1
+					? game.player1
+					: game.player2;
+
+			const opponent =
+				side === 1
+					? game.player2
+					: game.player1;
+
+			if (
+				scope.type ===
+					'player' &&
+				player !==
+					scope.player
+			) {
+				continue;
+			}
+
+			if (
+				scope.type ===
+					'matchup' &&
+				scope.subject &&
+				player !==
+					scope.subject
+			) {
+				continue;
+			}
+
+			const score =
+				side === 1
+					? game.player1Score
+					: game.player2Score;
+
+			const opponentScore =
+				side === 1
+					? game.player2Score
+					: game.player1Score;
+
+			const highHand =
+				effectiveHighHand(
+					game,
+					side,
+				);
+
+			const opponentHighHand =
+				effectiveHighHand(
+					game,
+					side === 1
+						? 2
+						: 1,
+				);
+
+			const hasScores =
+				score !== null &&
+				opponentScore !==
+					null;
+
+			const won =
+				hasScores
+					? score >
+						opponentScore
+					: null;
+
+			const lost =
+				hasScores
+					? score <
+						opponentScore
+					: null;
+
+			const margin =
+				hasScores
+					? Math.abs(
+							score -
+								opponentScore,
+						)
+					: null;
+
+			const scoreDifferential =
+				hasScores
+					? score -
+						opponentScore
+					: null;
+
+			const higherHighHand =
+				highHand !== null &&
+				opponentHighHand !==
+					null
+					? highHand >
+						opponentHighHand
+					: null;
+
+			const dealerFirst =
+				game.firstDealer ===
+					null
+					? null
+					: game.firstDealer ===
+						side;
+
+			const poneFirst =
+				dealerFirst === null
+					? null
+					: !dealerFirst;
+
+			let skunk:
+				boolean | null = null;
+
+			let doubleSkunk:
+				boolean | null = null;
+
+			if (
+				hasScores &&
+				won !== null
+			) {
+				if (!won) {
+					skunk = false;
+					doubleSkunk =
+						false;
+				} else if (
+					opponentScore <=
+					60
+				) {
+					skunk = false;
+					doubleSkunk =
+						true;
+				} else if (
+					opponentScore <=
+					90
+				) {
+					skunk = true;
+					doubleSkunk =
+						false;
+				} else {
+					skunk = false;
+					doubleSkunk =
+						false;
+				}
+			}
+
+			observations.push({
+				gameId:
+					game.id,
+
+				playedDate:
+					game.playedDate,
+
+				playedTime:
+					game.playedTime,
+
+				player,
+				opponent,
+
+				playerSide:
+					side,
+
+				score,
+
+				opponentScore,
+
+				margin,
+
+				scoreDifferential,
+
+				won:
+					toSqlBoolean(
+						won,
+					),
+
+				lost:
+					toSqlBoolean(
+						lost,
+					),
+
+				highHand,
+
+				opponentHighHand,
+
+				higherHighHand:
+					toSqlBoolean(
+						higherHighHand,
+					),
+
+				dealerFirst:
+					toSqlBoolean(
+						dealerFirst,
+					),
+
+				poneFirst:
+					toSqlBoolean(
+						poneFirst,
+					),
+
+				skunk:
+					toSqlBoolean(
+						skunk,
+					),
+
+				doubleSkunk:
+					toSqlBoolean(
+						doubleSkunk,
+					),
+
+				handDataComplete:
+					game.handDataIncomplete
+						? 0
+						: 1,
+			});
+		}
+	}
+
+	return observations;
+}
+
+function buildSqlHandObservations(
+	hands: HandStatisticsRecord[],
+	scope: MetricEvaluationScope,
+): CustomMetricSqlHandObservation[] {
+	const observations:
+		CustomMetricSqlHandObservation[] =
+			[];
+
+	for (const hand of hands) {
+		if (
+			scope.type ===
+				'matchup' &&
+			!handContainsPlayers(
+				hand,
+				scope.player1,
+				scope.player2,
+			)
+		) {
+			continue;
+		}
+
+		for (
+			const side of [1, 2] as const
+		) {
+			const player =
+				side === 1
+					? hand.player1
+					: hand.player2;
+
+			const opponent =
+				side === 1
+					? hand.player2
+					: hand.player1;
+
+			if (
+				scope.type ===
+					'player' &&
+				player !== scope.player
+			) {
+				continue;
+			}
+
+			if (
+				scope.type ===
+					'matchup' &&
+				scope.subject &&
+				player !==
+					scope.subject
+			) {
+				continue;
+			}
+
+			const dealer =
+				getHandDealer(
+					hand.firstDealer,
+					hand.handNumber,
+				);
+
+			const isDealer =
+				dealer === side;
+
+			observations.push({
+				gameId:
+					hand.gameId,
+
+				handId:
+					hand.id,
+
+				playedDate:
+					hand.playedDate,
+
+				playedTime:
+					hand.playedTime,
+
+				player,
+				opponent,
+
+				playerSide:
+					side,
+
+				handNumber:
+					hand.handNumber,
+
+				handPoints:
+					side === 1
+						? hand
+								.player1HandPoints
+						: hand
+								.player2HandPoints,
+
+				opponentHandPoints:
+					side === 1
+						? hand
+								.player2HandPoints
+						: hand
+								.player1HandPoints,
+
+				cribPoints:
+					isDealer
+						? hand.cribPoints
+						: null,
+
+				roundCribPoints:
+					hand.cribPoints,
+
+				dealer:
+					isDealer
+						? 1
+						: 0,
+
+				pone:
+					isDealer
+						? 0
+						: 1,
+
+				lastHand:
+					hand.isLastHand
+						? 1
+						: 0,
+
+				eligibleHand:
+					hand.isLastHand
+						? 0
+						: 1,
+
+				handDataComplete:
+					hand
+						.handDataIncomplete
+						? 0
+						: 1,
+			});
+		}
+	}
+
+	return observations;
+}
+
+function toSqlBoolean(
+	value: boolean | null,
+): number | null {
+	if (value === null) {
+		return null;
+	}
+
+	return value ? 1 : 0;
+}
+
+function buildSqlContext(
+	scope: MetricEvaluationScope,
+): CustomMetricSqlContext {
+	if (scope.type === 'global') {
+		return {
+			scope: 'global',
+
+			selectedPlayer:
+				null,
+
+			matchupPlayer1:
+				null,
+
+			matchupPlayer2:
+				null,
+
+			subjectPlayer:
+				null,
+		};
+	}
+
+	if (scope.type === 'player') {
+		return {
+			scope: 'player',
+
+			selectedPlayer:
+				scope.player,
+
+			matchupPlayer1:
+				null,
+
+			matchupPlayer2:
+				null,
+
+			subjectPlayer:
+				scope.player,
+		};
+	}
+
+	return {
+		scope: 'matchup',
+
+		selectedPlayer:
+			scope.subject ??
+			null,
+
+		matchupPlayer1:
+			scope.player1,
+
+		matchupPlayer2:
+			scope.player2,
+
+		subjectPlayer:
+			scope.subject ??
+			null,
+	};
 }
 
 function buildObservation(
@@ -433,14 +1123,48 @@ function gameContainsPlayers(
 	);
 }
 
+function handContainsPlayers(
+	hand: HandStatisticsRecord,
+	player1: string,
+	player2: string,
+): boolean {
+	return (
+		(
+			hand.player1 === player1 &&
+			hand.player2 === player2
+		) ||
+		(
+			hand.player1 === player2 &&
+			hand.player2 === player1
+		)
+	);
+}
+
+function getHandDealer(
+	firstDealer: 1 | 2,
+	handNumber: number,
+): 1 | 2 {
+	if (
+		handNumber % 2 === 1
+	) {
+		return firstDealer;
+	}
+
+	return firstDealer === 1
+		? 2
+		: 1;
+}
+
 class FormulaParser {
 	private position = 0;
 
-	constructor(
-		private tokens: Token[],
-		private observations:
-			GameObservation[],
-	) {}
+    constructor(
+        private tokens: Token[],
+        private observations:
+            GameObservation[],
+        private allowedFields:
+            Set<string>,
+    ) {}
 
 	parse(): number | null {
 		const value =
@@ -793,7 +1517,9 @@ class FormulaParser {
 			tokens[0].value
 				.toUpperCase();
 
-        if (!GAME_FIELDS.has(field)) {
+        if (
+            !this.allowedFields.has(field)
+        ) {
 
 			throw new Error(
 				`Unknown field "${tokens[0].value}".`,

@@ -625,3 +625,19 @@ input.cribbage-below-par {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 }
+
+.cribbage-custom-preview-count {
+	margin-top: 2px;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+.cribbage-custom-preview-value {
+	text-align: right;
+}
+
+@media (max-width: 600px) {
+	.cribbage-custom-preview-value {
+		text-align: left;
+	}
+}

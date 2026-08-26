@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS:
 	databasePath:
 		'Cribbage/cribbage.db',
 
-	showCsvImporter: true,
+	showCsvImporter: false,
 
 	dealerHandPar: 7.95,
 	poneHandPar: 8.10,

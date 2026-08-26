@@ -1,4 +1,4 @@
-# Obsidian Sample Plugin
+# Obsidian Cribbage Tracker
 **Disclaimer: LLMs were used for the majority of code generation. All features and design elements were my ideas, but I am not a developer and would not have been able to create the code without spending months of my free time learning the language. I wanted a plugin that allowed me to track my cribbage games against my wife without needing my ugly Excel sheet anymore. I checked and tested all aspects of the plugin to make sure it worked as I expected, so I am pretty confident in the functionality, but it may be written inefficiently.**
 
 **Disclaimer 2: As I am not a developer, once this plugin achieves the functionality I wish for, I can't promise I will make too many updates. I am not planning to publicize this plugin beyond it being available in the Community Plugins browser, so if you find it on your own, congratulations but also YMMV with any issues/pull requests. I won't go AWOL but I will not be monitoring this religiously. And you are of course free to fork it if you wish to take it in a different direction/adapt for a different game/etc.**

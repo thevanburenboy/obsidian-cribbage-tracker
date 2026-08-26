@@ -1,92 +1,82 @@
 # Obsidian Sample Plugin
+**Disclaimer: LLMs were used for the majority of code generation. All features and design elements were my ideas, but I am not a developer and would not have been able to create the code without spending months of my free time learning the language. I wanted a plugin that allowed me to track my cribbage games against my wife without needing my ugly Excel sheet anymore. I checked and tested all aspects of the plugin to make sure it worked as I expected, so I am pretty confident in the functionality, but it may be written inefficiently.**
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+**Disclaimer 2: As I am not a developer, once this plugin achieves the functionality I wish for, I can't promise I will make too many updates. I am not planning to publicize this plugin beyond it being available in the Community Plugins browser, so if you find it on your own, congratulations but also YMMV with any issues/pull requests. I won't go AWOL but I will not be monitoring this religiously. And you are of course free to fork it if you wish to take it in a different direction/adapt for a different game/etc.**
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+This plugin allows users to track cribbage games, including hand-by-hand scores (optional), and tracks many statistics related to the games, including: Points per Game, W/L Record (including first/not first dealer breakdown), highest hands (if tracked), points per hand/crib (if tracked), and pegging/round (if hands are tracked).
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+There are 5 tabs in this plugin:
+- [Games](#games)
+- [Hands](#hands)
+- [Statistics (Global, Matchup, and Player)](#statistics)
+- [Leaderboard](#leaderboard)
+- [Custom Metrics](#custom-metrics)
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+## Games
+This tab is where you enter the high level data: Date/Time, Player 1/Player 1 Score, Player 2/Player 2 Score, and First Dealer. First Dealer can be unknown, so if you are not sure, leave as Unknown and that game will just not count into First Deal Win% and related metrics.
 
-## First time developing plugins?
+Below the New Game box, you will see a table of all games in the database, sorted by default from new to old. Each line also contains three buttons: one to delete the game, one to edit it, and one to take you to the linked Hands record (see below).
 
-Quick starting guide for new plugin devs:
+In the settings for this plugin, you can also enable "Show CSV importer", which will add a dialog in the middle of the Games screen that allows you to import a CSV of past games, if you have previously tracked them elsewhere.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Hands
+This tab is where you enter the hand-by-hand data for a given game. By default, it will select the most recent game in the database, but you can select another if you'd prefer.
 
-## Releasing new releases
+It will display summary information about the game, score, and first dealer at the top, and then there is a summary statistic section in the middle that also gives you the option to manually enter the high hand for each player in that game if you'd prefer to not track each hand individually.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+The Hands table at the bottom allows you to enter the score for Player 1, Player 2, and crib. The dealer is automatically determined by alternating the player, where Hand 1's dealer is the First Dealer denoted on the Games tab.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+**Important:** The last hand recorded for a game is automatically excluded from per hand statistics, as it is overwhelmingly likely that either one or both of the players will cross 121 without counting their full hand. **For accurate pegging stats, make sure to only count the effective points from the final hand. For example, if Player 1 counts first, has 8 points, but only needs 4 points to reach 121 and win, only enter 4, and then enter 0 for Player 2 and the crib as they did not count that round.** If the game ends during the pegging phase, enter the last hand as 0 for all 3 cells to avoid your penultimate hand not counting towards statistics.
 
-## Adding your plugin to the community plugin list
+## Statistics
+This tab includes statistical data for 3 scopes: Global, Player, and Matchup.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+**Global**
 
-## How to use
+This displays the total games across all matchups, the average margin of victory, first dealer record, first pone record, games that ended in a skunk (but not double skunk), games that ended in a double skunk, the longest win streak, the longest loss streak, the highest hand, the highest high-hand in a loss, the lowest high-hand in a win, global points per hand, global points per crib, global pegging per round, and completed hand logs. The three "points per" statistics are color coded based on "par" (retrieved from https://www.gamecolony.com/cribbage_hands.shtml), where those better than par are green and worse than par are red.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+There are also two tables beneath the statistic cards:
+- Winning % Distribution by High Hand: which shows the high hand, the win % with that exact hand, and the cumulative win % with that high hand or better.
+- Margin Distribution: which shows margins of victory from 1 to 30+ and the % of games that end at that exact margin as well as what % of games are at or smaller than that margin (ie, % of games that were margin of 8 points or closer).
 
-## Manually installing the plugin
+**Player**
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+This displays the same statistics as Global does, except filtered to just the selected player's results. There are also 3 additional cards: Higher High Hand, High-hand Tie, and Lower High Hand. These represent where your high hand in a game is relative to your opponent.
 
-## Improve code quality with eslint
+There are also the same two tables below the statistic cards, again filtered to just that player's games.
 
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+**Matchup**
 
-## Funding URL
+Once again, largely the same statistics as the above views, but this time you select two opponents and the view is side-by-side instead of cards.
 
-You can include funding URLs where people who use your plugin can financially support it.
+The same two tables are also present here below the side-by-side table, filtered to just games between these two players.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+## Leaderboard
 
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
-```
+This displays many of the same statistics as the Statistics tabs, but instead takes the view of ranking the players/games/hands in the database. For example, instead of global points per hand, it ranks every player with 5 or more games by their points per hand.
 
-If you have multiple URLs, you can also do:
+Another example is the Highest Hands statistic, which uses your hand data from games (and uses the high hand data as a fallback for games without individual hands) and displays what hands have occurred the most, with 3 possibilities:
+- one occurrence by one player (ie, Player A scored a 29 point hand once and no others have done it), which display as "Player | Points" with a subtext that says what game/date it occurred in,
+- multiple occurrences by one player (ie, Player A scored 24 points twice and no others have done it), which display as "Player | Points (# of Occurrences)" with a subtext that says the last game/date it occurred in,
+- multiple occurrences by multiple players (ie, Player A and B both scored 20 points 5 times each), which display as "Multiple | Points (# of Occurrences)" with a subtext that says what players have scored it the most, from high to low. Example would be "Player A 3x | Player B 2x". If 3+ players have achieved that score, it would show as "Player A 3x | Player B 2x | Others 6x".
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
-```
+## Custom Metrics
 
-## API Documentation
+This is a powerful tool that allows you to create any custom metrics you can think of that are missing from the stock statistics. When you add a new custom metric, it will show in a section below the stock statistic cards.
 
-See https://docs.obsidian.md
+When creating a metric, your options are:
+- Metric Name
+- Data Source (Games or Hands)
+- Calculation Mode (Metric Builder or Advanced SQL)
+- Formula (In either basic Excel-esque format or in SQL query format, depending on selection for Mode)
+- "Show On" check boxes (Global/Player/Matchup Statistic screens)
+- Matchup Display (Combined or Per Player, ie, # of Games where either Player had a 20+ point high hand vs. # of Games where Player A had 20+ against Player B and where Player B had 20+ against Player A)
+- Display Formatting (Formats: Integer, Decimal, Percentage, or Custom, which allows you to use basic formulas)
+
+It will also display a Preview field of what the values/formatting is for what you've entered, in order to sanity check what you have entered.
+
+## Configurable Settings
+- Database Path (default: Cribbage/cribbage.db): This is the vault-relative position where you want the .db file to be stored for your cribbage games.
+- Show CSV Importer (Yes/No): This allows you to enable/disable the dialog on the Games screen for importing games from a CSV file.
+- Par Benchmarks (Dealer hand/Pone hand/Crib/Dealer pegging/Pone pegging): This allows you to change the default "par" for the various scoring scenarios. On the assumption that each player is dealer 50% of the time, the par displayed in the Hands and Statistics screen is an average of the Dealer and Pone pars.
+- Minimum Requirements: This is for the minimum games/hands/etc threshold on the Leaderboard tab. By default, most leaderboard cards won't show players with less than 5 of the relevant scenario (games/hands/cribs).

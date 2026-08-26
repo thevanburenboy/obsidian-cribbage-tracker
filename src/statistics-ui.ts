@@ -1780,7 +1780,7 @@ function renderMetricGrid(container: HTMLElement, metrics: Metric[]): void {
 	for (const metric of metrics) {
 		const card = grid.createDiv('cribbage-stat-card');
 
-		card.createEl('span', {
+		card.createSpan({
 			text: metric.label,
 			cls: 'cribbage-stat-label',
 		});
@@ -1795,7 +1795,7 @@ function renderMetricGrid(container: HTMLElement, metrics: Metric[]): void {
 		}
 
 		if (metric.subtext) {
-			card.createEl('span', {
+			card.createSpan({
 				text: metric.subtext,
 				cls: 'cribbage-stat-subtext',
 			});

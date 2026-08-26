@@ -2682,10 +2682,10 @@ export class CribbageDatabase {
 
 	private createId(): string {
 		if (
-			typeof globalThis.crypto?.randomUUID ===
+			typeof window.crypto?.randomUUID ===
 			'function'
 		) {
-			return globalThis.crypto.randomUUID();
+			return window.crypto.randomUUID();
 		}
 
 		return [

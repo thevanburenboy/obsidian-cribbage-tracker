@@ -3,6 +3,10 @@ import { Notice } from 'obsidian';
 import type CribbageTrackerPlugin from './main';
 import type { GameInput } from './database';
 
+import {
+	confirmAction,
+} from './confirm-modal';
+
 interface CsvData {
 	fileName: string;
 	headers: string[];
@@ -503,8 +507,10 @@ function renderPreview(
                 }
 
 			const confirmed =
-				window.confirm(
-					`Import ${result.games.length} games into Cribbage Tracker?`,
+				await confirmAction(
+					plugin.app,
+					`Import ${result.games.length} games into Cribbage tracker?`,
+					'Import',
 				);
 
 			if (!confirmed) {

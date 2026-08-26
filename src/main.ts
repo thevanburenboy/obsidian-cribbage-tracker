@@ -37,6 +37,10 @@ import {
 	renderLeaderboardPage,
 } from './leaderboard-ui';
 
+import {
+	confirmAction,
+} from './confirm-modal';
+
 const VIEW_TYPE_CRIBBAGE = 'cribbage-tracker-view';
 
 export default class CribbageTrackerPlugin extends Plugin {
@@ -353,7 +357,7 @@ class CribbageTrackerView extends ItemView {
             text: 'Cribbage tracker',
         });
 
-        header.createEl('div', {
+        header.createDiv({
             text:
                 `${this.plugin.database.getGameCount()} games`,
             cls: 'cribbage-game-count',
@@ -956,8 +960,10 @@ class CribbageTrackerView extends ItemView {
             () => {
                 void (async () => {
                 const confirmed =
-                    window.confirm(
+                    await confirmAction(
+                        this.plugin.app,
                         `Delete ${game.player1} vs ${game.player2} on ${game.playedDate}?`,
+                        'Delete',
                     );
 
                 if (!confirmed) {

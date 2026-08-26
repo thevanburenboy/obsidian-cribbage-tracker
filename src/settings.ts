@@ -1,5 +1,12 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
-import CribbageTrackerPlugin from './main';
+import {
+	App,
+	PluginSettingTab,
+	type SettingDefinitionItem,
+} from 'obsidian';
+
+import CribbageTrackerPlugin
+	from './main';
+
 
 export interface CribbageTrackerSettings {
 	databasePath: string;
@@ -13,8 +20,12 @@ export interface CribbageTrackerSettings {
 	ponePeggingPar: number;
 }
 
-export const DEFAULT_SETTINGS: CribbageTrackerSettings = {
-	databasePath: 'Cribbage/cribbage.db',
+
+export const DEFAULT_SETTINGS:
+	CribbageTrackerSettings = {
+	databasePath:
+		'Cribbage/cribbage.db',
+
 	showCsvImporter: true,
 
 	dealerHandPar: 7.95,
@@ -24,234 +35,165 @@ export const DEFAULT_SETTINGS: CribbageTrackerSettings = {
 	dealerPeggingPar: 3.50,
 	ponePeggingPar: 2.10,
 };
-export class CribbageTrackerSettingTab extends PluginSettingTab {
-    plugin: CribbageTrackerPlugin;
 
-    constructor(app: App, plugin: CribbageTrackerPlugin) {
-        super(app, plugin);
-        this.plugin = plugin;
-    }
 
-    display(): void {
-        const { containerEl } = this;
+export class CribbageTrackerSettingTab
+	extends PluginSettingTab {
 
-        containerEl.empty();
+	plugin: CribbageTrackerPlugin;
 
-		new Setting(containerEl)
-			.setName('Configuration')
-			.setHeading();
+	constructor(
+		app: App,
+		plugin: CribbageTrackerPlugin,
+	) {
+		super(app, plugin);
 
-        new Setting(containerEl)
-            .setName('Database path')
-            .setDesc(
-                'Path to the SQLite database, relative to the root of your vault.',
-            )
-            .addText((text) =>
-                text
-                    .setPlaceholder('Cribbage/cribbage.db')
-                    .setValue(this.plugin.settings.databasePath)
-                    .onChange(async (value) => {
-                        this.plugin.settings.databasePath = value.trim();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-			new Setting(containerEl)
-				.setName('Show CSV importer')
-				.setDesc(
-					'Show the Import Games from CSV section in the Cribbage Tracker view.',
-				)
-				.addToggle((toggle) =>
-					toggle
-						.setValue(
-							this.plugin.settings.showCsvImporter,
-						)
-						.onChange(async (value) => {
-							this.plugin.settings.showCsvImporter =
-								value;
+		this.plugin = plugin;
+	}
 
-							await this.plugin.saveSettings();
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				type: 'group' as const,
+				heading: 'Configuration',
 
-							this.plugin.refreshViews();
-						}),
-				);
-new Setting(containerEl)
-	.setName('Par benchmarks')
-	.setHeading();
+				items: [
+					{
+						name: 'Database path',
 
-containerEl.createEl('p', {
-	text:
-		'Benchmarks shown alongside hand, crib, and pegging statistics. You can change these to your own targets.',
-	cls: 'setting-item-description',
-});
+						desc:
+							'Path to the SQLite database, relative to the root of your vault.',
 
-new Setting(containerEl)
-	.setName('Dealer hand par')
-	.setDesc(
-		'Expected hand points when the player is dealer.',
-	)
-	.addText((text) => {
-		text.inputEl.type = 'number';
-		text.inputEl.min = '0';
-		text.inputEl.step = '0.01';
+						control: {
+							type: 'text' as const,
+							key: 'databasePath',
+							placeholder:
+								'Cribbage/cribbage.db',
+						},
+					},
 
-		text
-			.setValue(
-				String(
-					this.plugin.settings.dealerHandPar,
-				),
-			)
-			.onChange(async (value) => {
-				const parsed = Number(value);
+					{
+						name:
+							'Show CSV importer',
 
-				if (
-					!Number.isFinite(parsed) ||
-					parsed < 0
-				) {
-					return;
-				}
+						desc:
+							'Show the Import games from CSV section in the Cribbage tracker view.',
 
-				this.plugin.settings.dealerHandPar =
-					parsed;
+						render: (setting) => {
+							setting.addToggle(
+								(toggle) =>
+									toggle
+										.setValue(
+											this
+												.plugin
+												.settings
+												.showCsvImporter,
+										)
+										.onChange(
+											async (
+												value,
+											) => {
+												this.plugin
+													.settings
+													.showCsvImporter =
+													value;
 
-				await this.plugin.saveSettings();
-				this.plugin.refreshViews();
-			});
-	});
+												await this
+													.plugin
+													.saveSettings();
 
-new Setting(containerEl)
-	.setName('Pone hand par')
-	.setDesc(
-		'Expected hand points when the player is not dealer.',
-	)
-	.addText((text) => {
-		text.inputEl.type = 'number';
-		text.inputEl.min = '0';
-		text.inputEl.step = '0.01';
+												this.plugin
+													.refreshViews();
+											},
+										),
+							);
+						},
+					},
+				],
+			},
 
-		text
-			.setValue(
-				String(
-					this.plugin.settings.poneHandPar,
-				),
-			)
-			.onChange(async (value) => {
-				const parsed = Number(value);
+			{
+				type: 'group' as const,
+				heading:
+					'Par benchmarks',
 
-				if (
-					!Number.isFinite(parsed) ||
-					parsed < 0
-				) {
-					return;
-				}
+				items: [
+					{
+						name:
+							'Dealer hand par',
 
-				this.plugin.settings.poneHandPar =
-					parsed;
+						desc:
+							'Benchmark for hand points when dealing.',
 
-				await this.plugin.saveSettings();
-				this.plugin.refreshViews();
-			});
-	});
+						control: {
+							type: 'number' as const,
+							key:
+								'dealerHandPar',
+							min: 0,
+						},
+					},
 
-new Setting(containerEl)
-	.setName('Crib par')
-	.setDesc(
-		'Expected points from the dealer’s crib.',
-	)
-	.addText((text) => {
-		text.inputEl.type = 'number';
-		text.inputEl.min = '0';
-		text.inputEl.step = '0.01';
+					{
+						name:
+							'Pone hand par',
 
-		text
-			.setValue(
-				String(
-					this.plugin.settings.cribPar,
-				),
-			)
-			.onChange(async (value) => {
-				const parsed = Number(value);
+						desc:
+							'Benchmark for hand points when pone.',
 
-				if (
-					!Number.isFinite(parsed) ||
-					parsed < 0
-				) {
-					return;
-				}
+						control: {
+							type: 'number' as const,
+							key:
+								'poneHandPar',
+							min: 0,
+						},
+					},
 
-				this.plugin.settings.cribPar =
-					parsed;
+					{
+						name:
+							'Crib par',
 
-				await this.plugin.saveSettings();
-				this.plugin.refreshViews();
-			});
-	});
+						desc:
+							'Benchmark for crib points.',
 
-new Setting(containerEl)
-	.setName('Dealer pegging par')
-	.setDesc(
-		'Expected pegging points when the player is dealer.',
-	)
-	.addText((text) => {
-		text.inputEl.type = 'number';
-		text.inputEl.min = '0';
-		text.inputEl.step = '0.01';
+						control: {
+							type: 'number' as const,
+							key:
+								'cribPar',
+							min: 0,
+						},
+					},
 
-		text
-			.setValue(
-				String(
-					this.plugin.settings.dealerPeggingPar,
-				),
-			)
-			.onChange(async (value) => {
-				const parsed = Number(value);
+					{
+						name:
+							'Dealer pegging par',
 
-				if (
-					!Number.isFinite(parsed) ||
-					parsed < 0
-				) {
-					return;
-				}
+						desc:
+							'Benchmark for pegging points per round when dealing.',
 
-				this.plugin.settings.dealerPeggingPar =
-					parsed;
+						control: {
+							type: 'number' as const,
+							key:
+								'dealerPeggingPar',
+							min: 0,
+						},
+					},
 
-				await this.plugin.saveSettings();
-				this.plugin.refreshViews();
-			});
-	});
+					{
+						name:
+							'Pone pegging par',
 
-new Setting(containerEl)
-	.setName('Pone pegging par')
-	.setDesc(
-		'Expected pegging points when the player is not dealer.',
-	)
-	.addText((text) => {
-		text.inputEl.type = 'number';
-		text.inputEl.min = '0';
-		text.inputEl.step = '0.01';
+						desc:
+							'Benchmark for pegging points per round when pone.',
 
-		text
-			.setValue(
-				String(
-					this.plugin.settings.ponePeggingPar,
-				),
-			)
-			.onChange(async (value) => {
-				const parsed = Number(value);
-
-				if (
-					!Number.isFinite(parsed) ||
-					parsed < 0
-				) {
-					return;
-				}
-
-				this.plugin.settings.ponePeggingPar =
-					parsed;
-
-				await this.plugin.saveSettings();
-				this.plugin.refreshViews();
-			});
-	});
-    }
+						control: {
+							type: 'number' as const,
+							key:
+								'ponePeggingPar',
+							min: 0,
+						},
+					},
+				],
+			},
+		];
+	}
 }

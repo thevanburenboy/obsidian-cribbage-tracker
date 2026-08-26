@@ -23,6 +23,10 @@ import {
 	evaluateCustomFormat,
 } from './custom-metric-formatter';
 
+import {
+	confirmAction,
+} from './confirm-modal';
+
 export function renderCustomMetricsPage(
 	container: HTMLElement,
 	plugin: CribbageTrackerPlugin,
@@ -170,11 +174,18 @@ class CustomMetricsPage {
 				cls: 'cribbage-delete-button',
 			});
 
-            remove.addEventListener('click', () => {
-                void (async () => {
-                    if (!window.confirm(`Delete "${metric.name}"?`)) {
-                        return;
-                    }
+			remove.addEventListener('click', () => {
+				void (async () => {
+					const confirmed =
+						await confirmAction(
+							this.plugin.app,
+							`Delete "${metric.name}"?`,
+							'Delete',
+						);
+
+					if (!confirmed) {
+						return;
+					}
 
                     try {
                         await this.plugin.database.deleteCustomMetric(metric.id);
@@ -278,7 +289,7 @@ class CustomMetricsPage {
 			text: 'Advanced SQL',
 		});
 
-		sqlArea.createEl('div', {
+		sqlArea.createDiv({
 			text: 'Warning: Advanced SQL bypasses the metric builder and its logical guardrails. Incorrect or expensive queries may produce unexpected results. SQL evaluation will run against an isolated copy of the database rather than the live database.',
 			cls: 'cribbage-custom-warning',
 		});
@@ -394,7 +405,7 @@ class CustomMetricsPage {
 
 		const customFormatArea = panel.createDiv();
 
-		customFormatArea.createEl('div', {
+		customFormatArea.createDiv({
 			text: 'Warning: Custom formatting bypasses the stock number formats. Invalid expressions may produce unexpected output. The formatter will use a restricted formatting language rather than arbitrary JavaScript.',
 			cls: 'cribbage-custom-warning',
 		});
@@ -576,11 +587,11 @@ class CustomMetricsPage {
                 const labelArea =
                     row.createDiv();
 
-                labelArea.createEl('span', {
+                labelArea.createSpan({
                     text: label,
                 });
 
-                labelArea.createEl('div', {
+                labelArea.createDiv({
                     text:
                         `${result.observationCount} scoped observations`,
                     cls:
@@ -630,7 +641,7 @@ class CustomMetricsPage {
                         text: custom.text,
                     });
 
-                    valueArea.createEl('div', {
+                    valueArea.createDiv({
                         text:
                             `Raw: ${
                                 result.value === null
@@ -699,7 +710,7 @@ class CustomMetricsPage {
                             'cribbage-custom-preview-row',
                         );
 
-                    row.createEl('span', {
+                    row.createSpan({
                         text: 'Matchup',
                     });
 

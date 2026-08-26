@@ -1260,7 +1260,7 @@ function renderLeaderboardCard(
 	});
 
 	if (options?.note) {
-		card.createEl('div', {
+		card.createDiv({
 			text:
 				options.note,
 			cls:
@@ -1300,14 +1300,14 @@ function renderLeaderboardCard(
 				'cribbage-leaderboard-row-main',
 			);
 
-		main.createEl('span', {
+		main.createSpan({
 			text:
 				`${item.rank}.`,
 			cls:
 				'cribbage-leaderboard-rank',
 		});
 
-		main.createEl('span', {
+		main.createSpan({
 			text: item.label,
 			cls:
 				'cribbage-leaderboard-name',
@@ -1321,7 +1321,7 @@ function renderLeaderboardCard(
 		});
 
 		if (item.subtext) {
-			row.createEl('div', {
+			row.createDiv({
 				text:
 					item.subtext,
 				cls:
@@ -1379,14 +1379,14 @@ function renderGroupedRecordCard(
 				'cribbage-leaderboard-row-main',
 			);
 
-		main.createEl('span', {
+		main.createSpan({
 			text:
 				`${record.rank}.`,
 			cls:
 				'cribbage-leaderboard-rank',
 		});
 
-		main.createEl('span', {
+		main.createSpan({
 			text:
 				record.label,
 			cls:
@@ -1404,7 +1404,7 @@ function renderGroupedRecordCard(
 				'cribbage-leaderboard-value',
 		});
 
-		row.createEl('div', {
+		row.createDiv({
 			text:
 				record.subtext,
 			cls:
@@ -1900,14 +1900,14 @@ function renderWinningStreakCard(
 				'cribbage-leaderboard-row-main',
 			);
 
-		main.createEl('span', {
+		main.createSpan({
 			text:
 				`${record.rank}.`,
 			cls:
 				'cribbage-leaderboard-rank',
 		});
 
-		main.createEl('span', {
+		main.createSpan({
 			text:
 				record.label,
 			cls:
@@ -1936,7 +1936,7 @@ function renderWinningStreakCard(
 				'cribbage-leaderboard-value',
 		});
 
-		row.createEl('div', {
+		row.createDiv({
 			text:
 				record.subtext,
 			cls:
@@ -1945,7 +1945,7 @@ function renderWinningStreakCard(
 	}
 
 	if (hasActiveMarker) {
-		card.createEl('div', {
+		card.createDiv({
 			text: '* Active streak',
 			cls:
 				'cribbage-leaderboard-note cribbage-leaderboard-active-note',
@@ -2712,7 +2712,7 @@ function renderEmpty(
 	container: HTMLElement,
 	text: string,
 ): void {
-	container.createEl('div', {
+	container.createDiv({
 		text,
 		cls:
 			'cribbage-leaderboard-empty',

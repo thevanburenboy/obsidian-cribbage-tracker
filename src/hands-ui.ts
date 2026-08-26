@@ -7,6 +7,10 @@ import type {
 	HandRecord,
 } from './database';
 
+import {
+	confirmAction,
+} from './confirm-modal';
+
 export function renderHandsPage(
 	container: HTMLElement,
 	plugin: CribbageTrackerPlugin,
@@ -450,7 +454,7 @@ function renderHands(
 	if (game.firstDealer === null) {
 		panel.createEl('p', {
 			text:
-				'Set the first dealer in the "Games" page before adding hands.',
+				'Set the first dealer on the Games page before adding hands.',
 			cls: 'cribbage-warning',
 		});
 	}
@@ -685,10 +689,12 @@ function renderHandRow(
 		'click',
         () => {
             void (async () => {
-                const confirmed =
-                    window.confirm(
-                        `Delete hand ${hand.handNumber}?`,
-                    );
+				const confirmed =
+					await confirmAction(
+						plugin.app,
+						`Delete hand ${hand.handNumber}?`,
+						'Delete',
+					);
 
                 if (!confirmed) {
                     return;
@@ -927,7 +933,7 @@ function createSummaryValue(
 			'cribbage-summary-item',
 		);
 
-	item.createEl('span', {
+	item.createSpan({
 		text: label,
 		cls:
 			'cribbage-summary-label',

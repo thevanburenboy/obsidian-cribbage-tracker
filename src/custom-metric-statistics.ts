@@ -98,7 +98,7 @@ function renderMetric(
 			'cribbage-stat-card',
 		);
 
-	card.createEl('span', {
+	card.createSpan({
 		text: metric.name,
 		cls: 'cribbage-stat-label',
 	});
@@ -160,7 +160,7 @@ function renderSingleResult(
 				'cribbage-stat-value cribbage-preview-error',
 		});
 
-		card.createEl('span', {
+		card.createSpan({
 			text: result.error,
 			cls:
 				'cribbage-stat-subtext',
@@ -187,7 +187,7 @@ function renderSingleResult(
                     'cribbage-stat-value cribbage-preview-error',
             });
 
-            card.createEl('span', {
+            card.createSpan({
                 text: custom.error,
                 cls:
                     'cribbage-stat-subtext',
@@ -270,7 +270,7 @@ function renderPlayerResult(
 			'cribbage-custom-matchup-value',
 		);
 
-	row.createEl('span', {
+	row.createSpan({
 		text: subject,
 		cls:
 			'cribbage-custom-matchup-player',

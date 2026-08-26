@@ -2,15 +2,74 @@ import type CribbageTrackerPlugin from './main';
 
 import type { GameStatisticsRecord } from './database';
 
-import {
-	renderCustomMetricStatistics,
-} from './custom-metric-statistics';
+import { renderCustomMetricStatistics } from './custom-metric-statistics';
 
 interface Metric {
 	label: string;
 	value: string;
 	subtext?: string;
 	valueClass?: string;
+}
+
+interface ContextRecordOccurrence {
+	value: number;
+
+	player: string;
+	opponent: string;
+
+	playedDate: string;
+	playedTime: string;
+}
+
+interface ContextStreakOccurrence {
+	type: 'W' | 'L';
+	length: number;
+
+	player: string;
+
+	startDate: string;
+	startTime: string;
+
+	endDate: string;
+	endTime: string;
+
+	active: boolean;
+}
+
+interface SkunkContextOccurrence {
+	winner: string;
+	loser: string;
+
+	winnerScore: number;
+	loserScore: number;
+
+	playedDate: string;
+	playedTime: string;
+
+	doubleSkunk: boolean;
+}
+
+interface StatisticContext {
+	highHand?: string;
+
+	highestHighHandInLoss?: string;
+
+	lowestHighHandInWin?: string;
+
+	currentStreak?: string;
+
+	longestWinStreak?: string;
+
+	longestLossStreak?: string;
+
+	skunkWin?: string;
+	skunkLoss?: string;
+
+	doubleSkunkWin?: string;
+	doubleSkunkLoss?: string;
+
+	globalSkunkGame?: string;
+	globalDoubleSkunkGame?: string;
 }
 
 interface PlayerStats {
@@ -223,14 +282,25 @@ function renderGlobalStats(
 	const globalPeggingPerRound =
 		totalPlayerRounds > 0 ? totalPegging / totalPlayerRounds : null;
 
-    const globalHighHand =
-        calculateGlobalHighHand(
-            games,
-        );
+	const globalHighHand = calculateGlobalHighHand(games);
 
 	const highHandExtremes = calculateGlobalHighHandExtremes(games);
 
 	const globalExtras = calculateGlobalExtras(games);
+
+	const context = calculateStatisticContext(games, null, null);
+
+	const longestWinStreak =
+		calculateGlobalStreakSummary(
+			games,
+			'W',
+		);
+
+	const longestLossStreak =
+		calculateGlobalStreakSummary(
+			games,
+			'L',
+		);
 
 	const metrics: Metric[] = [
 		{
@@ -259,6 +329,8 @@ function renderGlobalStats(
 		{
 			label: 'Skunk games',
 			value: formatCountRate(globalExtras.skunkGames, completed.length),
+			subtext:
+				context.globalSkunkGame,
 		},
 		{
 			label: 'Double-skunk games',
@@ -266,39 +338,50 @@ function renderGlobalStats(
 				globalExtras.doubleSkunkGames,
 				completed.length,
 			),
+			subtext:
+				context.globalDoubleSkunkGame,
 		},
 		{
 			label: 'Longest win streak',
+
 			value:
-				globalExtras.longestWinPlayer === null
-					? '—'
-					: `${globalExtras.longestWinPlayer} — W${globalExtras.longestWin}`,
+				formatStreakWithCount(
+					'W',
+					longestWinStreak.length,
+					longestWinStreak.count,
+				),
+
+			subtext:
+				context.longestWinStreak,
 		},
 		{
 			label: 'Longest loss streak',
+
 			value:
-				globalExtras.longestLossPlayer === null
-					? '—'
-					: `${globalExtras.longestLossPlayer} — L${globalExtras.longestLoss}`,
+				formatStreakWithCount(
+					'L',
+					longestLossStreak.length,
+					longestLossStreak.count,
+				),
+
+			subtext:
+				context.longestLossStreak,
 		},
-        {
-            label: 'High hand',
-            value:
-                formatValueWithCount(
-                    globalHighHand.value,
-                    globalHighHand.count,
-                ),
-            subtext:
-                globalHighHand.scorer === null
-                    ? undefined
-                    : `Scored by: ${globalHighHand.scorer}`,
-        },
+		{
+			label: 'High hand',
+			value: formatValueWithCount(
+				globalHighHand.value,
+				globalHighHand.count,
+			),
+			subtext: context.highHand,
+		},
 		{
 			label: 'Highest high-hand in loss',
 			value: formatValueWithCount(
 				highHandExtremes.highestHighHandInLoss,
 				highHandExtremes.highestHighHandInLossCount,
 			),
+			subtext: context.highestHighHandInLoss,
 		},
 		{
 			label: 'Lowest high-hand in win',
@@ -306,6 +389,7 @@ function renderGlobalStats(
 				highHandExtremes.lowestHighHandInWin,
 				highHandExtremes.lowestHighHandInWinCount,
 			),
+			subtext: context.lowestHighHandInWin,
 		},
 		{
 			label: 'Points / hand',
@@ -342,14 +426,9 @@ function renderGlobalStats(
 
 	renderMetricGrid(container, metrics);
 
-    renderCustomMetricStatistics(
-        container,
-        plugin,
-        games,
-        {
-            type: 'global',
-        },
-    );
+	renderCustomMetricStatistics(container, plugin, games, {
+		type: 'global',
+	});
 
 	renderHighHandWinTable(
 		container,
@@ -372,17 +451,14 @@ function renderPlayerStats(
 
 	const stats = calculatePlayerStats(games, player, null);
 
-	renderMetricGrid(container, playerMetrics(stats, plugin));
+	const context = calculateStatisticContext(games, player, null);
 
-    renderCustomMetricStatistics(
-        container,
-        plugin,
-        games,
-        {
-            type: 'player',
-            player,
-        },
-    );
+	renderMetricGrid(container, playerMetrics(stats, plugin, context));
+
+	renderCustomMetricStatistics(container, plugin, games, {
+		type: 'player',
+		player,
+	});
 
 	renderHighHandWinTable(
 		container,
@@ -429,6 +505,10 @@ function renderMatchupStats(
 	const stats1 = calculatePlayerStats(games, player1, player2);
 
 	const stats2 = calculatePlayerStats(games, player2, player1);
+
+	const context1 = calculateStatisticContext(games, player1, player2);
+
+	const context2 = calculateStatisticContext(games, player2, player1);
 
 	const table = container.createEl('table', {
 		cls: 'cribbage-table cribbage-stat-table',
@@ -599,16 +679,71 @@ function renderMatchupStats(
 		],
 	];
 
-    renderCustomMetricStatistics(
-        container,
-        plugin,
-        games,
-        {
-            type: 'matchup',
-            player1,
-            player2,
-        },
-    );
+	const contextualSubtexts = new Map<
+		string,
+		[string | undefined, string | undefined]
+	>([
+		['Current streak', [context1.currentStreak, context2.currentStreak]],
+
+		[
+			'Longest win streak',
+			[context1.longestWinStreak, context2.longestWinStreak],
+		],
+
+		[
+			'Longest loss streak',
+			[context1.longestLossStreak, context2.longestLossStreak],
+		],
+
+		['High hand', [context1.highHand, context2.highHand]],
+
+		[
+			'Highest high-hand in loss',
+			[context1.highestHighHandInLoss, context2.highestHighHandInLoss],
+		],
+
+		[
+			'Lowest high-hand in win',
+			[context1.lowestHighHandInWin, context2.lowestHighHandInWin],
+		],
+		[
+			'Skunk wins',
+			[
+				context1.skunkWin,
+				context2.skunkWin,
+			],
+		],
+
+		[
+			'Skunk losses',
+			[
+				context1.skunkLoss,
+				context2.skunkLoss,
+			],
+		],
+
+		[
+			'Double-skunk wins',
+			[
+				context1.doubleSkunkWin,
+				context2.doubleSkunkWin,
+			],
+		],
+
+		[
+			'Double-skunk losses',
+			[
+				context1.doubleSkunkLoss,
+				context2.doubleSkunkLoss,
+			],
+		],
+	]);
+
+	renderCustomMetricStatistics(container, plugin, games, {
+		type: 'matchup',
+		player1,
+		player2,
+	});
 
 	renderHighHandWinTable(
 		container,
@@ -636,6 +771,18 @@ function renderMatchupStats(
 
 			if (index === 0) {
 				continue;
+			}
+
+			const subtexts = contextualSubtexts.get(label);
+
+			const subtext = index === 1 ? subtexts?.[0] : subtexts?.[1];
+
+			if (subtext) {
+				cell.createDiv({
+					text: subtext,
+
+					cls: 'cribbage-stat-subtext',
+				});
 			}
 
 			if (label.startsWith('Points / hand')) {
@@ -855,23 +1002,21 @@ function calculatePlayerStats(
 			}
 		}
 
-        if (game.firstDealer !== null) {
-            if (
-                game.firstDealer === side
-            ) {
-                if (won) {
-                    dealerFirstWins++;
-                } else if (lost) {
-                    dealerFirstLosses++;
-                }
-            } else {
-                if (won) {
-                    poneFirstWins++;
-                } else if (lost) {
-                    poneFirstLosses++;
-                }
-            }
-        }
+		if (game.firstDealer !== null) {
+			if (game.firstDealer === side) {
+				if (won) {
+					dealerFirstWins++;
+				} else if (lost) {
+					dealerFirstLosses++;
+				}
+			} else {
+				if (won) {
+					poneFirstWins++;
+				} else if (lost) {
+					poneFirstLosses++;
+				}
+			}
+		}
 
 		if (won || lost) {
 			const losingScore = won ? opponentScore : playerScore;
@@ -953,6 +1098,7 @@ function calculatePlayerStats(
 function playerMetrics(
 	stats: PlayerStats,
 	plugin: CribbageTrackerPlugin,
+	context: StatisticContext,
 ): Metric[] {
 	const handPar =
 		(plugin.settings.dealerHandPar + plugin.settings.poneHandPar) / 2;
@@ -994,19 +1140,51 @@ function playerMetrics(
 		},
 		{
 			label: 'Skunk wins',
-			value: formatCountRate(stats.skunkWins, stats.games),
+
+			value:
+				formatCountRate(
+					stats.skunkWins,
+					stats.games,
+				),
+
+			subtext:
+				context.skunkWin,
 		},
 		{
 			label: 'Skunk losses',
-			value: formatCountRate(stats.skunkLosses, stats.games),
+
+			value:
+				formatCountRate(
+					stats.skunkLosses,
+					stats.games,
+				),
+
+			subtext:
+				context.skunkLoss,
 		},
 		{
 			label: 'Double-skunk wins',
-			value: formatCountRate(stats.doubleSkunkWins, stats.games),
+
+			value:
+				formatCountRate(
+					stats.doubleSkunkWins,
+					stats.games,
+				),
+
+			subtext:
+				context.doubleSkunkWin,
 		},
 		{
 			label: 'Double-skunk losses',
-			value: formatCountRate(stats.doubleSkunkLosses, stats.games),
+
+			value:
+				formatCountRate(
+					stats.doubleSkunkLosses,
+					stats.games,
+				),
+
+			subtext:
+				context.doubleSkunkLoss,
 		},
 		{
 			label: 'Current streak',
@@ -1014,11 +1192,13 @@ function playerMetrics(
 				stats.currentStreakType,
 				stats.currentStreakCount,
 			),
+			subtext: context.currentStreak,
 		},
 		{
 			label: 'Longest win streak',
 			value:
 				stats.longestWinStreak > 0 ? `W${stats.longestWinStreak}` : '—',
+			subtext: context.longestWinStreak,
 		},
 		{
 			label: 'Longest loss streak',
@@ -1026,10 +1206,12 @@ function playerMetrics(
 				stats.longestLossStreak > 0
 					? `L${stats.longestLossStreak}`
 					: '—',
+			subtext: context.longestLossStreak,
 		},
 		{
 			label: 'High hand',
 			value: stats.highHand === null ? '—' : String(stats.highHand),
+			subtext: context.highHand,
 		},
 		{
 			label: 'Higher high hand',
@@ -1064,6 +1246,7 @@ function playerMetrics(
 				stats.highestHighHandInLoss,
 				stats.highestHighHandInLossCount,
 			),
+			subtext: context.highestHighHandInLoss,
 		},
 		{
 			label: 'Lowest high-hand in win',
@@ -1071,6 +1254,7 @@ function playerMetrics(
 				stats.lowestHighHandInWin,
 				stats.lowestHighHandInWinCount,
 			),
+			subtext: context.lowestHighHandInWin,
 		},
 		{
 			label: 'Points / hand',
@@ -1104,6 +1288,744 @@ function playerMetrics(
 			value: String(stats.completeHandLogs),
 		},
 	];
+}
+
+function calculateStatisticContext(
+	games: GameStatisticsRecord[],
+	player: string | null,
+	opponent: string | null,
+): StatisticContext {
+	const relevant = games.filter((game) => {
+		if (player !== null && !gameContainsPlayer(game, player)) {
+			return false;
+		}
+
+		if (
+			player !== null &&
+			opponent !== null &&
+			!gameContainsPlayers(game, player, opponent)
+		) {
+			return false;
+		}
+
+		return true;
+	});
+
+	const highHands: ContextRecordOccurrence[] = [];
+
+	const lossHighHands: ContextRecordOccurrence[] = [];
+
+	const winHighHands: ContextRecordOccurrence[] = [];
+
+	for (const game of relevant) {
+		for (const side of [1, 2] as const) {
+			const subject = side === 1 ? game.player1 : game.player2;
+
+			if (player !== null && subject !== player) {
+				continue;
+			}
+
+			const high = effectiveHighHand(game, side);
+
+			if (high === null) {
+				continue;
+			}
+
+			const opponentName = side === 1 ? game.player2 : game.player1;
+
+			const occurrence: ContextRecordOccurrence = {
+				value: high,
+
+				player: subject,
+
+				opponent: opponentName,
+
+				playedDate: game.playedDate,
+
+				playedTime: game.playedTime,
+			};
+
+			highHands.push(occurrence);
+
+			if (
+				!hasCompletedScore(game) ||
+				game.player1Score === game.player2Score
+			) {
+				continue;
+			}
+
+			const playerScore =
+				side === 1 ? game.player1Score : game.player2Score;
+
+			const opponentScore =
+				side === 1 ? game.player2Score : game.player1Score;
+
+			if (playerScore === null || opponentScore === null) {
+				continue;
+			}
+
+			if (playerScore > opponentScore) {
+				winHighHands.push(occurrence);
+			} else {
+				lossHighHands.push(occurrence);
+			}
+		}
+	}
+
+	const includePlayer = player === null;
+
+	const highHandOccurrences = selectExtremeRecordOccurrences(
+		highHands,
+		'maximum',
+	);
+
+	const skunkOccurrences =
+		buildSkunkContextOccurrences(
+			relevant,
+		);
+
+	const highestLossOccurrences = selectExtremeRecordOccurrences(
+		lossHighHands,
+		'maximum',
+	);
+
+	const lowestWinOccurrences = selectExtremeRecordOccurrences(
+		winHighHands,
+		'minimum',
+	);
+
+	const streakPlayers =
+		player === null
+			? Array.from(
+					new Set(
+						relevant.flatMap((game) => [
+							game.player1,
+							game.player2,
+						]),
+					),
+				)
+			: [player];
+
+	const streaks: ContextStreakOccurrence[] = [];
+
+	for (const streakPlayer of streakPlayers) {
+		streaks.push(...buildContextStreakOccurrences(relevant, streakPlayer));
+	}
+
+	const longestWins = selectLongestStreakOccurrences(streaks, 'W');
+
+	const longestLosses = selectLongestStreakOccurrences(streaks, 'L');
+
+	const current =
+		player === null
+			? undefined
+			: streaks.find(
+					(streak) => streak.player === player && streak.active,
+				);
+
+	const normalSkunks =
+		skunkOccurrences.filter(
+			(occurrence) =>
+				!occurrence.doubleSkunk,
+		);
+
+	const doubleSkunks =
+		skunkOccurrences.filter(
+			(occurrence) =>
+				occurrence.doubleSkunk,
+		);
+
+	const latestGlobalSkunk =
+		latestSkunkOccurrence(
+			normalSkunks,
+		);
+
+	const latestGlobalDoubleSkunk =
+		latestSkunkOccurrence(
+			doubleSkunks,
+		);
+
+	const playerSkunkWin =
+		player === null
+			? undefined
+			: latestSkunkOccurrence(
+					normalSkunks.filter(
+						(occurrence) =>
+							occurrence.winner ===
+							player,
+					),
+				);
+
+	const playerSkunkLoss =
+		player === null
+			? undefined
+			: latestSkunkOccurrence(
+					normalSkunks.filter(
+						(occurrence) =>
+							occurrence.loser ===
+							player,
+					),
+				);
+
+	const playerDoubleSkunkWin =
+		player === null
+			? undefined
+			: latestSkunkOccurrence(
+					doubleSkunks.filter(
+						(occurrence) =>
+							occurrence.winner ===
+							player,
+					),
+				);
+
+	const playerDoubleSkunkLoss =
+		player === null
+			? undefined
+			: latestSkunkOccurrence(
+					doubleSkunks.filter(
+						(occurrence) =>
+							occurrence.loser ===
+							player,
+					),
+				);
+
+	return {
+		highHand: formatRecordContext(highHandOccurrences, includePlayer),
+
+		highestHighHandInLoss: formatRecordContext(
+			highestLossOccurrences,
+			includePlayer,
+		),
+
+		lowestHighHandInWin: formatRecordContext(
+			lowestWinOccurrences,
+			includePlayer,
+		),
+
+		currentStreak: current
+			? formatStreakContext([current], false)
+			: undefined,
+
+		longestWinStreak: formatStreakContext(longestWins, includePlayer),
+
+		longestLossStreak: formatStreakContext(longestLosses, includePlayer),
+
+		skunkWin:
+			formatPlayerSkunkContext(
+				playerSkunkWin,
+				true,
+				false,
+			),
+
+		skunkLoss:
+			formatPlayerSkunkContext(
+				playerSkunkLoss,
+				false,
+				false,
+			),
+
+		doubleSkunkWin:
+			formatPlayerSkunkContext(
+				playerDoubleSkunkWin,
+				true,
+				true,
+			),
+
+		doubleSkunkLoss:
+			formatPlayerSkunkContext(
+				playerDoubleSkunkLoss,
+				false,
+				true,
+			),
+
+		globalSkunkGame:
+			formatGlobalSkunkContext(
+				latestGlobalSkunk,
+			),
+
+		globalDoubleSkunkGame:
+			formatGlobalSkunkContext(
+				latestGlobalDoubleSkunk,
+			),
+	};
+}
+
+function selectExtremeRecordOccurrences(
+	occurrences: ContextRecordOccurrence[],
+	direction: 'minimum' | 'maximum',
+): ContextRecordOccurrence[] {
+	if (occurrences.length === 0) {
+		return [];
+	}
+
+	const values = occurrences.map((occurrence) => occurrence.value);
+
+	const extreme =
+		direction === 'maximum' ? Math.max(...values) : Math.min(...values);
+
+	return occurrences.filter((occurrence) => occurrence.value === extreme);
+}
+
+function buildContextStreakOccurrences(
+	games: GameStatisticsRecord[],
+	player: string,
+): ContextStreakOccurrence[] {
+	const chronological = [...games]
+		.filter(
+			(game) =>
+				gameContainsPlayer(game, player) &&
+				hasCompletedScore(game) &&
+				game.player1Score !== game.player2Score,
+		)
+		.sort(
+			(a, b) =>
+				a.playedDate.localeCompare(b.playedDate) ||
+				a.playedTime.localeCompare(b.playedTime) ||
+				a.id.localeCompare(b.id),
+		);
+
+	const occurrences: ContextStreakOccurrence[] = [];
+
+	let currentType: 'W' | 'L' | null = null;
+
+	let currentCount = 0;
+
+	let startDate = '';
+	let startTime = '';
+
+	let endDate = '';
+	let endTime = '';
+
+	const finish = (active: boolean) => {
+		if (currentType === null || currentCount === 0) {
+			return;
+		}
+
+		occurrences.push({
+			type: currentType,
+
+			length: currentCount,
+
+			player,
+
+			startDate,
+			startTime,
+
+			endDate,
+			endTime,
+
+			active,
+		});
+
+		currentType = null;
+
+		currentCount = 0;
+	};
+
+	for (const game of chronological) {
+		const side = getPlayerSide(game, player);
+
+		if (side === null) {
+			continue;
+		}
+
+		const playerScore = side === 1 ? game.player1Score : game.player2Score;
+
+		const opponentScore =
+			side === 1 ? game.player2Score : game.player1Score;
+
+		if (
+			playerScore === null ||
+			opponentScore === null ||
+			playerScore === opponentScore
+		) {
+			continue;
+		}
+
+		const result: 'W' | 'L' = playerScore > opponentScore ? 'W' : 'L';
+
+		if (result === currentType) {
+			currentCount++;
+
+			endDate = game.playedDate;
+
+			endTime = game.playedTime;
+
+			continue;
+		}
+
+		finish(false);
+
+		currentType = result;
+
+		currentCount = 1;
+
+		startDate = game.playedDate;
+
+		startTime = game.playedTime;
+
+		endDate = game.playedDate;
+
+		endTime = game.playedTime;
+	}
+
+	finish(true);
+
+	return occurrences;
+}
+
+function selectLongestStreakOccurrences(
+	occurrences: ContextStreakOccurrence[],
+	type: 'W' | 'L',
+): ContextStreakOccurrence[] {
+	const matching = occurrences.filter(
+		(occurrence) => occurrence.type === type,
+	);
+
+	if (matching.length === 0) {
+		return [];
+	}
+
+	const longest = Math.max(
+		...matching.map((occurrence) => occurrence.length),
+	);
+
+	return matching.filter((occurrence) => occurrence.length === longest);
+}
+
+function formatRecordContext(
+	occurrences: ContextRecordOccurrence[],
+	includePlayer: boolean,
+): string | undefined {
+	if (occurrences.length === 0) {
+		return undefined;
+	}
+
+	if (occurrences.length === 1) {
+		const occurrence = occurrences[0]!;
+
+		const context = `vs ${occurrence.opponent} on ${formatDate(
+			occurrence.playedDate,
+		)}`;
+
+		return includePlayer ? `${occurrence.player} • ${context}` : context;
+	}
+
+	const players = new Set(occurrences.map((occurrence) => occurrence.player));
+
+	if (players.size === 1) {
+		const latest = [...occurrences].sort(
+			compareContextRecordsNewestFirst,
+		)[0]!;
+
+		const context = `Last: vs ${latest.opponent} on ${formatDate(
+			latest.playedDate,
+		)}`;
+
+		return includePlayer ? `${latest.player} • ${context}` : context;
+	}
+
+	return formatContributorContext(occurrences);
+}
+
+function formatStreakContext(
+	occurrences: ContextStreakOccurrence[],
+	includePlayer: boolean,
+): string | undefined {
+	if (occurrences.length === 0) {
+		return undefined;
+	}
+
+	if (occurrences.length === 1) {
+		const occurrence = occurrences[0]!;
+
+		const range = formatContextStreakDateRange(occurrence);
+
+		return includePlayer ? `${occurrence.player} • ${range}` : range;
+	}
+
+	const players = new Set(occurrences.map((occurrence) => occurrence.player));
+
+	if (players.size === 1) {
+		const latest = [...occurrences].sort(
+			compareContextStreaksNewestFirst,
+		)[0]!;
+
+		const context = `Last: ${formatContextStreakDateRange(latest)}`;
+
+		return includePlayer ? `${latest.player} • ${context}` : context;
+	}
+
+	return formatContributorContext(occurrences);
+}
+
+function formatContributorContext(
+	occurrences: Array<{
+		player: string;
+	}>,
+): string {
+	const counts = new Map<string, number>();
+
+	for (const occurrence of occurrences) {
+		counts.set(occurrence.player, (counts.get(occurrence.player) ?? 0) + 1);
+	}
+
+	const contributors = Array.from(counts.entries()).sort(
+		(a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+	);
+
+	const pieces: string[] = [];
+
+	for (const [player, count] of contributors.slice(0, 2)) {
+		pieces.push(`${player} ${count}x`);
+	}
+
+	const others = contributors
+		.slice(2)
+		.reduce((total, [, count]) => total + count, 0);
+
+	if (others > 0) {
+		pieces.push(`Others ${others}x`);
+	}
+
+	return pieces.join(' • ');
+}
+
+function compareContextRecordsNewestFirst(
+	a: ContextRecordOccurrence,
+	b: ContextRecordOccurrence,
+): number {
+	return (
+		b.playedDate.localeCompare(a.playedDate) ||
+		b.playedTime.localeCompare(a.playedTime)
+	);
+}
+
+function compareContextStreaksNewestFirst(
+	a: ContextStreakOccurrence,
+	b: ContextStreakOccurrence,
+): number {
+	return (
+		b.endDate.localeCompare(a.endDate) || b.endTime.localeCompare(a.endTime)
+	);
+}
+
+function formatContextStreakDateRange(streak: ContextStreakOccurrence): string {
+	return `${formatDate(streak.startDate)} - ${formatDate(streak.endDate)}`;
+}
+
+function buildSkunkContextOccurrences(
+	games: GameStatisticsRecord[],
+): SkunkContextOccurrence[] {
+	const occurrences:
+		SkunkContextOccurrence[] = [];
+
+	for (const game of games) {
+		if (
+			!hasCompletedScore(game) ||
+			game.player1Score ===
+				game.player2Score
+		) {
+			continue;
+		}
+
+		const player1Won =
+			(game.player1Score ?? 0) >
+			(game.player2Score ?? 0);
+
+		const winner =
+			player1Won
+				? game.player1
+				: game.player2;
+
+		const loser =
+			player1Won
+				? game.player2
+				: game.player1;
+
+		const winnerScore =
+			player1Won
+				? game.player1Score!
+				: game.player2Score!;
+
+		const loserScore =
+			player1Won
+				? game.player2Score!
+				: game.player1Score!;
+
+		if (loserScore > 90) {
+			continue;
+		}
+
+		occurrences.push({
+			winner,
+			loser,
+
+			winnerScore,
+			loserScore,
+
+			playedDate:
+				game.playedDate,
+
+			playedTime:
+				game.playedTime,
+
+			doubleSkunk:
+				loserScore <= 60,
+		});
+	}
+
+	return occurrences;
+}
+
+
+function latestSkunkOccurrence(
+	occurrences:
+		SkunkContextOccurrence[],
+): SkunkContextOccurrence | undefined {
+	return [...occurrences]
+		.sort(
+			(a, b) =>
+				b.playedDate.localeCompare(
+					a.playedDate,
+				) ||
+				b.playedTime.localeCompare(
+					a.playedTime,
+				),
+		)[0];
+}
+
+
+function formatPlayerSkunkContext(
+	occurrence:
+		SkunkContextOccurrence | undefined,
+	won: boolean,
+	doubleSkunk: boolean,
+): string | undefined {
+	if (!occurrence) {
+		return undefined;
+	}
+
+	const verb =
+		doubleSkunk
+			? 'double-skunked'
+			: 'skunked';
+
+	const opponent =
+		won
+			? occurrence.loser
+			: occurrence.winner;
+
+	return won
+		? `Last: ${verb} ${opponent} on ${formatDate(
+				occurrence.playedDate,
+			)}`
+		: `Last: ${verb} by ${opponent} on ${formatDate(
+				occurrence.playedDate,
+			)}`;
+}
+
+
+function formatGlobalSkunkContext(
+	occurrence:
+		SkunkContextOccurrence | undefined,
+): string | undefined {
+	if (!occurrence) {
+		return undefined;
+	}
+
+	return (
+		`${occurrence.winner} ` +
+		`${occurrence.winnerScore} - ` +
+		`${occurrence.loserScore} ` +
+		`${occurrence.loser} • ` +
+		formatDate(
+			occurrence.playedDate,
+		)
+	);
+}
+
+function calculateGlobalStreakSummary(
+	games: GameStatisticsRecord[],
+	type: 'W' | 'L',
+): {
+	length: number;
+	count: number;
+} {
+	const players =
+		new Set<string>();
+
+	for (const game of games) {
+		players.add(
+			game.player1,
+		);
+
+		players.add(
+			game.player2,
+		);
+	}
+
+	const occurrences:
+		ContextStreakOccurrence[] = [];
+
+	for (const player of players) {
+		occurrences.push(
+			...buildContextStreakOccurrences(
+				games,
+				player,
+			),
+		);
+	}
+
+	const matching =
+		occurrences.filter(
+			(occurrence) =>
+				occurrence.type === type,
+		);
+
+	if (matching.length === 0) {
+		return {
+			length: 0,
+			count: 0,
+		};
+	}
+
+	const length =
+		Math.max(
+			...matching.map(
+				(occurrence) =>
+					occurrence.length,
+			),
+		);
+
+	return {
+		length,
+
+		count:
+			matching.filter(
+				(occurrence) =>
+					occurrence.length ===
+					length,
+			).length,
+	};
+}
+
+
+function formatStreakWithCount(
+	type: 'W' | 'L',
+	length: number,
+	count: number,
+): string {
+	if (length === 0) {
+		return '—';
+	}
+
+	const value =
+		`${type}${length}`;
+
+	return count > 1
+		? `${value} (x${count})`
+		: value;
 }
 
 function effectiveHighHand(
@@ -1389,9 +2311,7 @@ function calculateGlobalExtras(games: GameStatisticsRecord[]): {
 	};
 }
 
-function calculateGlobalHighHand(
-	games: GameStatisticsRecord[],
-): {
+function calculateGlobalHighHand(games: GameStatisticsRecord[]): {
 	value: number | null;
 	count: number;
 	scorer: string | null;
@@ -1402,31 +2322,19 @@ function calculateGlobalHighHand(
 
 	for (const game of games) {
 		for (const side of [1, 2] as const) {
-			const high =
-				effectiveHighHand(
-					game,
-					side,
-				);
+			const high = effectiveHighHand(game, side);
 
 			if (high === null) {
 				continue;
 			}
 
-			const player =
-				side === 1
-					? game.player1
-					: game.player2;
+			const player = side === 1 ? game.player1 : game.player2;
 
-			if (
-				value === null ||
-				high > value
-			) {
+			if (value === null || high > value) {
 				value = high;
 				count = 1;
 				scorer = player;
-			} else if (
-				high === value
-			) {
+			} else if (high === value) {
 				count++;
 				scorer = 'Multiple';
 			}
@@ -1923,4 +2831,28 @@ function formatPercent(value: number | null): string {
 	}
 
 	return (value * 100).toFixed(1) + '%';
+}
+
+function formatDate(value: string): string {
+	const parts = value.split('-');
+
+	if (parts.length !== 3) {
+		return value;
+	}
+
+	const year = Number(parts[0]);
+
+	const month = Number(parts[1]);
+
+	const day = Number(parts[2]);
+
+	if (
+		!Number.isFinite(year) ||
+		!Number.isFinite(month) ||
+		!Number.isFinite(day)
+	) {
+		return value;
+	}
+
+	return `${month}/${day}/${String(year).slice(-2)}`;
 }

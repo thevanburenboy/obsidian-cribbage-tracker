@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-cribbage-tracker",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Track cribbage games, hands, and statistics.",
 	"main": "main.js",
 	"type": "module",

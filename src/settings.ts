@@ -7,7 +7,9 @@ import {
 import CribbageTrackerPlugin
 	from './main';
 
-
+import {
+	confirmAction,
+} from './confirm-modal';
 export interface CribbageTrackerSettings {
 	databasePath: string;
 	showCsvImporter: boolean;
@@ -324,6 +326,60 @@ export class CribbageTrackerSettingTab
 								'leaderboardMinHighHandGames',
 							min: 1,
 							step: 1,
+						},
+					},
+				],
+			},
+			{
+				type: 'group' as const,
+				heading: 'Reset',
+
+				items: [
+					{
+						name:
+							'Reset all settings',
+
+						desc:
+							'Restore all Cribbage tracker settings to their default values.',
+
+						render: (setting) => {
+							setting.addButton(
+								(button) =>
+									button
+										.setButtonText(
+											'Reset to defaults',
+										)
+										.setDestructive()
+										.onClick(
+											() => {
+												void (async () => {
+													const confirmed =
+														await confirmAction(
+															this.plugin.app,
+															'Reset all Cribbage tracker settings to their default values?',
+															'Reset',
+														);
+
+													if (!confirmed) {
+														return;
+													}
+
+													Object.assign(
+														this.plugin.settings,
+														DEFAULT_SETTINGS,
+													);
+
+													await this.plugin
+														.saveSettings();
+
+													this.plugin
+														.refreshViews();
+
+													this.update();
+												})();
+											},
+										),
+							);
 						},
 					},
 				],

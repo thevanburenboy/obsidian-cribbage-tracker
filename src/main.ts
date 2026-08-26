@@ -33,6 +33,10 @@ import {
 	renderCustomMetricsPage,
 } from './custom-metrics-ui';
 
+import {
+	renderLeaderboardPage,
+} from './leaderboard-ui';
+
 const VIEW_TYPE_CRIBBAGE = 'cribbage-tracker-view';
 
 export default class CribbageTrackerPlugin extends Plugin {
@@ -149,7 +153,9 @@ class CribbageTrackerView extends ItemView {
         | 'games'
         | 'hands'
         | 'statistics'
-        | 'custom-metrics' = 'games';
+        | 'leaderboard'
+        | 'custom-metrics' =
+            'games';
 
     private selectedGameId:
         string | null = null;
@@ -379,6 +385,12 @@ class CribbageTrackerView extends ItemView {
 
         this.createNavigationButton(
             navigation,
+            'Leaderboard',
+            'leaderboard',
+        );
+
+        this.createNavigationButton(
+            navigation,
             'Custom Metrics',
             'custom-metrics',
         );
@@ -410,6 +422,13 @@ class CribbageTrackerView extends ItemView {
             this.activePage === 'statistics'
         ) {
             renderStatisticsPage(
+                contentEl,
+                this.plugin,
+            );
+        } else if (
+            this.activePage === 'leaderboard'
+        ) {
+            renderLeaderboardPage(
                 contentEl,
                 this.plugin,
             );
@@ -451,6 +470,7 @@ class CribbageTrackerView extends ItemView {
             | 'games'
             | 'hands'
             | 'statistics'
+            | 'leaderboard'
             | 'custom-metrics',
     ): void {
         const button =

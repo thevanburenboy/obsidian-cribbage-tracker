@@ -1,5 +1,6 @@
 import {
 	App,
+	Notice,
 	PluginSettingTab,
 	type SettingDefinitionItem,
 } from 'obsidian';
@@ -69,6 +70,23 @@ export class CribbageTrackerSettingTab
 		this.plugin = plugin;
 	}
 
+	override async setControlValue(
+		key: string,
+		value: unknown,
+	): Promise<void> {
+		await super.setControlValue(
+			key,
+			value,
+		);
+
+		this.plugin.refreshViews();
+
+		new Notice(
+			'Setting saved.',
+			1500,
+		);
+	}
+
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		return [
 			{
@@ -115,12 +133,14 @@ export class CribbageTrackerSettingTab
 													.showCsvImporter =
 													value;
 
-												await this
-													.plugin
-													.saveSettings();
+												await this.plugin.saveSettings();
 
-												this.plugin
-													.refreshViews();
+												this.plugin.refreshViews();
+
+												new Notice(
+													'Setting saved.',
+													1500,
+												);
 											},
 										),
 							);
@@ -374,6 +394,11 @@ export class CribbageTrackerSettingTab
 
 													this.plugin
 														.refreshViews();
+
+													new Notice(
+														'Settings reset to defaults.',
+														2000,
+													);
 
 													this.update();
 												})();

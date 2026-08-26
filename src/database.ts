@@ -1,4 +1,6 @@
 import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
+import sqlWasmBinary
+	from 'sql.js/dist/sql-wasm.wasm';
 import { normalizePath } from 'obsidian';
 import type CribbageTrackerPlugin from './main';
 
@@ -310,19 +312,13 @@ export class CribbageDatabase {
 			this.db = null;
 		}
 
-		const pluginDir = this.plugin.manifest.dir;
-
-		if (!pluginDir) {
-			throw new Error('Could not determine the plugin directory.');
-		}
-
-		const wasmPath = `${pluginDir}/sql-wasm.wasm`;
-		const wasmBinary =
-			await this.plugin.app.vault.adapter.readBinary(wasmPath);
-
-		this.sql = await initSqlJs({
-			wasmBinary,
-		});
+        this.sql =
+            await initSqlJs({
+                wasmBinary:
+                    new Uint8Array(
+                        sqlWasmBinary,
+                    ).buffer,
+            });
 
 		const path = this.getDatabasePath();
 

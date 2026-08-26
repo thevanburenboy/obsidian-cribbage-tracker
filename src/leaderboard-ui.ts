@@ -6,14 +6,6 @@ import type {
 	HandStatisticsRecord,
 } from './database';
 
-const MIN_GAMES = 5;
-const MIN_HANDS = 5;
-const MIN_CRIBS = 5;
-const MIN_ROUNDS = 5;
-const MIN_ROLE_GAMES = 5;
-const MIN_HIGH_HAND_GAMES = 5;
-const MIN_WINS = 5;
-
 interface PlayerAggregate {
 	name: string;
 
@@ -138,16 +130,19 @@ export function renderLeaderboardPage(
 	renderGamePerformance(
 		container,
 		summaries,
+		plugin,
 	);
 
 	renderHandPerformance(
 		container,
 		summaries,
+		plugin,
 	);
 
 	renderSituational(
 		container,
 		summaries,
+		plugin,
 	);
 
 	renderRecords(
@@ -722,7 +717,15 @@ function renderOverallStandings(
 function renderGamePerformance(
 	container: HTMLElement,
 	players: PlayerAggregate[],
+	plugin: CribbageTrackerPlugin,
 ): void {
+	const minGames =
+		plugin.settings
+			.leaderboardMinGames;
+
+	const minWins =
+		plugin.settings
+			.leaderboardMinWins;
 	const section =
 		createSection(
 			container,
@@ -741,7 +744,7 @@ function renderGamePerformance(
 			.filter(
 				(player) =>
 					player.games >=
-					MIN_GAMES,
+					minGames,
 			)
 			.map(
 				(player) => ({
@@ -766,7 +769,7 @@ function renderGamePerformance(
 			),
 		{
 			note:
-				`Minimum ${MIN_GAMES} games`,
+				`Minimum ${minGames} games`,
 		},
 	);
 
@@ -777,7 +780,7 @@ function renderGamePerformance(
 			.filter(
 				(player) =>
 					player.games >=
-					MIN_GAMES,
+					minGames,
 			)
 			.map(
 				(player) => ({
@@ -800,7 +803,7 @@ function renderGamePerformance(
 			),
 		{
 			note:
-				`Minimum ${MIN_GAMES} games`,
+				`Minimum ${minGames} games`,
 		},
 	);
 
@@ -811,7 +814,7 @@ function renderGamePerformance(
 			.filter(
 				(player) =>
 					player.games >=
-					MIN_GAMES,
+					minGames,
 			)
 			.map(
 				(player) => {
@@ -838,7 +841,7 @@ function renderGamePerformance(
 			),
 		{
 			note:
-				`Minimum ${MIN_GAMES} games`,
+				`Minimum ${minGames} games`,
 		},
 	);
 
@@ -849,7 +852,7 @@ function renderGamePerformance(
             .filter(
                 (player) =>
                     player.wins >=
-                    MIN_WINS,
+                    minWins,
             )
             .map(
                 (player) => {
@@ -874,7 +877,7 @@ function renderGamePerformance(
             ),
         {
             note:
-                `Minimum ${MIN_WINS} wins`,
+                `Minimum ${minWins} wins`,
         },
     );
 }
@@ -882,7 +885,19 @@ function renderGamePerformance(
 function renderHandPerformance(
 	container: HTMLElement,
 	players: PlayerAggregate[],
+	plugin: CribbageTrackerPlugin,
 ): void {
+	const minHands =
+		plugin.settings
+			.leaderboardMinHands;
+
+	const minCribs =
+		plugin.settings
+			.leaderboardMinCribs;
+
+	const minRounds =
+		plugin.settings
+			.leaderboardMinRounds;
 	const section =
 		createSection(
 			container,
@@ -901,7 +916,7 @@ function renderHandPerformance(
 			.filter(
 				(player) =>
 					player.handCount >=
-					MIN_HANDS,
+					minHands,
 			)
 			.map(
 				(player) => ({
@@ -926,7 +941,7 @@ function renderHandPerformance(
 			),
 		{
 			note:
-				`Minimum ${MIN_HANDS} eligible hands`,
+				`Minimum ${minHands} eligible hands`,
 		},
 	);
 
@@ -937,7 +952,7 @@ function renderHandPerformance(
 			.filter(
 				(player) =>
 					player.cribCount >=
-					MIN_CRIBS,
+					minCribs,
 			)
 			.map(
 				(player) => ({
@@ -962,7 +977,7 @@ function renderHandPerformance(
 			),
 		{
 			note:
-				`Minimum ${MIN_CRIBS} eligible cribs`,
+				`Minimum ${minCribs} eligible cribs`,
 		},
 	);
 
@@ -974,7 +989,7 @@ function renderHandPerformance(
 				(player) =>
 					player
 						.peggingRoundCount >=
-					MIN_ROUNDS,
+					minRounds,
 			)
 			.map(
 				(player) => ({
@@ -1001,7 +1016,7 @@ function renderHandPerformance(
 			),
 		{
 			note:
-				`Minimum ${MIN_ROUNDS} complete rounds`,
+				`Minimum ${minRounds} complete rounds`,
 		},
 	);
 }
@@ -1009,7 +1024,15 @@ function renderHandPerformance(
 function renderSituational(
 	container: HTMLElement,
 	players: PlayerAggregate[],
+	plugin: CribbageTrackerPlugin,
 ): void {
+	const minRoleGames =
+		plugin.settings
+			.leaderboardMinRoleGames;
+
+	const minHighHandGames =
+		plugin.settings
+			.leaderboardMinHighHandGames;
 	const section =
 		createSection(
 			container,
@@ -1028,7 +1051,7 @@ function renderSituational(
 			.filter(
 				(player) =>
 					player.dealerGames >=
-					MIN_ROLE_GAMES,
+					minRoleGames,
 			)
 			.map(
 				(player) => {
@@ -1054,7 +1077,7 @@ function renderSituational(
 			),
 		{
 			note:
-				`Minimum ${MIN_ROLE_GAMES} first-dealer games`,
+				`Minimum ${minRoleGames} first-dealer games`,
 		},
 	);
 
@@ -1065,7 +1088,7 @@ function renderSituational(
 			.filter(
 				(player) =>
 					player.poneGames >=
-					MIN_ROLE_GAMES,
+					minRoleGames,
 			)
 			.map(
 				(player) => {
@@ -1091,7 +1114,7 @@ function renderSituational(
 			),
 		{
 			note:
-				`Minimum ${MIN_ROLE_GAMES} pone-first games`,
+				`Minimum ${minRoleGames} pone-first games`,
 		},
 	);
 
@@ -1103,7 +1126,7 @@ function renderSituational(
 				(player) =>
 					player
 						.highHandComparableGames >=
-					MIN_HIGH_HAND_GAMES,
+					minHighHandGames,
 			)
 			.map(
 				(player) => {
@@ -1131,7 +1154,7 @@ function renderSituational(
 			),
 		{
 			note:
-				`Minimum ${MIN_HIGH_HAND_GAMES} comparable games`,
+				`Minimum ${minHighHandGames} comparable games`,
 		},
 	);
 }

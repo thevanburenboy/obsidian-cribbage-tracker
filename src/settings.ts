@@ -18,6 +18,14 @@ export interface CribbageTrackerSettings {
 
 	dealerPeggingPar: number;
 	ponePeggingPar: number;
+
+	leaderboardMinGames: number;
+	leaderboardMinWins: number;
+	leaderboardMinHands: number;
+	leaderboardMinCribs: number;
+	leaderboardMinRounds: number;
+	leaderboardMinRoleGames: number;
+	leaderboardMinHighHandGames: number;
 }
 
 
@@ -34,6 +42,14 @@ export const DEFAULT_SETTINGS:
 
 	dealerPeggingPar: 3.50,
 	ponePeggingPar: 2.10,
+
+	leaderboardMinGames: 5,
+	leaderboardMinWins: 5,
+	leaderboardMinHands: 5,
+	leaderboardMinCribs: 5,
+	leaderboardMinRounds: 5,
+	leaderboardMinRoleGames: 5,
+	leaderboardMinHighHandGames: 5,
 };
 
 
@@ -55,7 +71,6 @@ export class CribbageTrackerSettingTab
 		return [
 			{
 				type: 'group' as const,
-				heading: 'Configuration',
 
 				items: [
 					{
@@ -190,6 +205,125 @@ export class CribbageTrackerSettingTab
 							key:
 								'ponePeggingPar',
 							min: 0,
+						},
+					},
+				],
+			},
+			{
+				type: 'group' as const,
+				heading:
+					'Leaderboard qualification',
+
+				items: [
+					{
+						name:
+							'Minimum games',
+
+						desc:
+							'Games required for win percentage, PPG, and score differential leaderboards.',
+
+						control: {
+							type: 'number' as const,
+							key:
+								'leaderboardMinGames',
+							min: 1,
+							step: 1,
+						},
+					},
+
+					{
+						name:
+							'Minimum wins',
+
+						desc:
+							'Wins required for the average margin of victory leaderboard.',
+
+						control: {
+							type: 'number' as const,
+							key:
+								'leaderboardMinWins',
+							min: 1,
+							step: 1,
+						},
+					},
+
+					{
+						name:
+							'Minimum hands',
+
+						desc:
+							'Eligible hands required for the points per hand leaderboard.',
+
+						control: {
+							type: 'number' as const,
+							key:
+								'leaderboardMinHands',
+							min: 1,
+							step: 1,
+						},
+					},
+
+					{
+						name:
+							'Minimum cribs',
+
+						desc:
+							'Eligible cribs required for the points per crib leaderboard.',
+
+						control: {
+							type: 'number' as const,
+							key:
+								'leaderboardMinCribs',
+							min: 1,
+							step: 1,
+						},
+					},
+
+					{
+						name:
+							'Minimum rounds',
+
+						desc:
+							'Complete rounds required for the pegging per round leaderboard.',
+
+						control: {
+							type: 'number' as const,
+							key:
+								'leaderboardMinRounds',
+							min: 1,
+							step: 1,
+						},
+					},
+
+					{
+						name:
+							'Minimum role games',
+
+						desc:
+							'Games required for dealing-first and pone-first leaderboards.',
+
+						control: {
+							type: 'number' as const,
+							key:
+								'leaderboardMinRoleGames',
+							min: 1,
+							step: 1,
+						},
+					},
+
+					{
+						name:
+							'Minimum comparable high-hand games',
+
+						desc:
+							'Games with comparable high hands required for the higher high-hand percentage leaderboard.',
+
+						control: {
+							type: 'number' as const,
+							key:
+								'leaderboardMinHighHandGames',
+							min: 1,
+							step: 1,
 						},
 					},
 				],

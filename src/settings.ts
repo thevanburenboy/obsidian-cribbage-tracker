@@ -1,5 +1,6 @@
 import {
 	App,
+	debounce,
 	Notice,
 	PluginSettingTab,
 	type SettingDefinitionItem,
@@ -99,11 +100,46 @@ export class CribbageTrackerSettingTab
 						desc:
 							'Path to the SQLite database, relative to the root of your vault.',
 
-						control: {
-							type: 'text' as const,
-							key: 'databasePath',
-							placeholder:
-								'Cribbage/cribbage.db',
+						render: (setting) => {
+							const saveDatabasePath =
+								debounce(
+									(value: string) => {
+										void (async () => {
+											this.plugin.settings
+												.databasePath =
+												value.trim();
+
+											await this.plugin
+												.saveSettings();
+
+											new Notice(
+												'Setting saved.',
+												1500,
+											);
+										})();
+									},
+									750,
+									true,
+								);
+
+							setting.addText(
+								(text) =>
+									text
+										.setPlaceholder(
+											'Cribbage/cribbage.db',
+										)
+										.setValue(
+											this.plugin.settings
+												.databasePath,
+										)
+										.onChange(
+											(value) => {
+												saveDatabasePath(
+													value,
+												);
+											},
+										),
+							);
 						},
 					},
 

@@ -2311,6 +2311,9 @@ export class CribbageDatabase {
         const db = this.requireDb();
         let version = this.getSchemaVersion();
 
+        const originalVersion =
+            version;
+
         if (version > CURRENT_SCHEMA_VERSION) {
             throw new Error(
                 `Database schema ${version} is newer than this plugin supports (${CURRENT_SCHEMA_VERSION}).`,
@@ -2611,7 +2614,9 @@ export class CribbageDatabase {
             }
         }
 
-        await this.save();
+        if (version !== originalVersion) {
+            await this.save();
+        }
 
     }
 

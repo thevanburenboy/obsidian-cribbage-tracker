@@ -14,7 +14,7 @@
 	"license": "0-BSD",
 	"devDependencies": {
 		"@eslint/js": "^9.39.4",
-		"@types/node": "^22.15.17",
+		"@types/node": "^26.2.0",
 		"@types/sql.js": "^1.4.11",
 		"esbuild": "0.25.5",
 		"eslint": "^9.39.4",

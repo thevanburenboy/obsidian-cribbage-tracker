@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-cribbage-tracker",
 	"name": "Cribbage Tracker",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"minAppVersion": "1.13.0",
 	"description": "Track cribbage games, hands, and statistics.",
 	"author": "thevanburenboys",

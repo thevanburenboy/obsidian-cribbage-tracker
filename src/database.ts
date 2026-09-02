@@ -617,6 +617,8 @@ export class CribbageDatabase {
             ],
         );
 		this.recalculateGameAggregates(id);
+
+        await this.save();
 	}
 
 	async deleteGame(id: string): Promise<void> {

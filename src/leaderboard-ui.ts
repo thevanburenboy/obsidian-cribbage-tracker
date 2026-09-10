@@ -1228,12 +1228,44 @@ function renderRecords(
 			),
 	);
 
-    renderWinningStreakCard(
-        grid,
-        buildWinningStreakOccurrences(
-            games,
-        ),
-    );
+	renderWinningStreakCard(
+		grid,
+		buildWinningStreakOccurrences(
+			games,
+		),
+	);
+
+	renderGroupedRecordCard(
+		grid,
+		'Largest final-count deficit overcome',
+		buildFinalCountDeficitOccurrences(
+			games,
+			hands,
+		),
+		'descending',
+	);
+
+	renderGroupedRecordCard(
+		grid,
+		'Most final-count points in a win',
+		buildFinalCountPointOccurrences(
+			games,
+			hands,
+			true,
+		),
+		'descending',
+	);
+
+	renderGroupedRecordCard(
+		grid,
+		'Most final-count points in a loss',
+		buildFinalCountPointOccurrences(
+			games,
+			hands,
+			false,
+		),
+		'descending',
+	);
 
 	renderGroupedRecordCard(
 		grid,
@@ -2188,6 +2220,252 @@ function buildLowHighHandWinOccurrences(
 				: game.player2,
 
 			winningSide === 1
+				? game.player2
+				: game.player1,
+
+			game.playedDate,
+			game.playedTime,
+		);
+	}
+
+	return occurrences;
+}
+
+function getFinalCountPoints(
+	hand: HandStatisticsRecord,
+	side: 1 | 2,
+): number | null {
+	const handPoints =
+		side === 1
+			? hand.player1HandPoints
+			: hand.player2HandPoints;
+
+	if (
+		typeof handPoints !==
+		'number'
+	) {
+		return null;
+	}
+
+	if (
+		typeof hand.cribPoints !==
+		'number'
+	) {
+		return null;
+	}
+
+	const dealer =
+		getHandDealer(
+			hand.firstDealer,
+			hand.handNumber,
+		);
+
+	return (
+		handPoints +
+		(dealer === side
+			? hand.cribPoints
+			: 0)
+	);
+}
+
+function buildFinalCountDeficitOccurrences(
+	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
+): RecordOccurrence[] {
+	const occurrences:
+		RecordOccurrence[] = [];
+
+	const handsByGame =
+		groupHandsByGame(
+			hands,
+		);
+
+	for (const game of games) {
+		if (
+			typeof game.player1Score !==
+				'number' ||
+			typeof game.player2Score !==
+				'number' ||
+			game.player1Score ===
+				game.player2Score
+		) {
+			continue;
+		}
+
+		const gameHands =
+			handsByGame.get(
+				game.id,
+			) ?? [];
+
+		const finalHand =
+			gameHands.find(
+				(hand) =>
+					hand.isLastHand,
+			);
+
+		if (!finalHand) {
+			continue;
+		}
+
+		const winningSide:
+			1 | 2 =
+			game.player1Score >
+			game.player2Score
+				? 1
+				: 2;
+
+		const losingSide:
+			1 | 2 =
+			winningSide === 1
+				? 2
+				: 1;
+
+		const winnerFinalPoints =
+			getFinalCountPoints(
+				finalHand,
+				winningSide,
+			);
+
+		const loserFinalPoints =
+			getFinalCountPoints(
+				finalHand,
+				losingSide,
+			);
+
+		if (
+			winnerFinalPoints === null ||
+			loserFinalPoints === null
+		) {
+			continue;
+		}
+
+		const winnerScore =
+			winningSide === 1
+				? game.player1Score
+				: game.player2Score;
+
+		const loserScore =
+			losingSide === 1
+				? game.player1Score
+				: game.player2Score;
+
+		const winnerBeforeCount =
+			winnerScore -
+			winnerFinalPoints;
+
+		const loserBeforeCount =
+			loserScore -
+			loserFinalPoints;
+
+		const deficit =
+			loserBeforeCount -
+			winnerBeforeCount;
+
+		/*
+		 * This record specifically measures
+		 * deficits that were actually overcome.
+		 */
+		if (deficit <= 0) {
+			continue;
+		}
+
+		addRecordOccurrence(
+			occurrences,
+			deficit,
+
+			winningSide === 1
+				? game.player1
+				: game.player2,
+
+			winningSide === 1
+				? game.player2
+				: game.player1,
+
+			game.playedDate,
+			game.playedTime,
+		);
+	}
+
+	return occurrences;
+}
+
+function buildFinalCountPointOccurrences(
+	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
+	winner: boolean,
+): RecordOccurrence[] {
+	const occurrences:
+		RecordOccurrence[] = [];
+
+	const handsByGame =
+		groupHandsByGame(
+			hands,
+		);
+
+	for (const game of games) {
+		if (
+			typeof game.player1Score !==
+				'number' ||
+			typeof game.player2Score !==
+				'number' ||
+			game.player1Score ===
+				game.player2Score
+		) {
+			continue;
+		}
+
+		const gameHands =
+			handsByGame.get(
+				game.id,
+			) ?? [];
+
+		const finalHand =
+			gameHands.find(
+				(hand) =>
+					hand.isLastHand,
+			);
+
+		if (!finalHand) {
+			continue;
+		}
+
+		const winningSide:
+			1 | 2 =
+			game.player1Score >
+			game.player2Score
+				? 1
+				: 2;
+
+		const side:
+			1 | 2 =
+			winner
+				? winningSide
+				: winningSide === 1
+					? 2
+					: 1;
+
+		const points =
+			getFinalCountPoints(
+				finalHand,
+				side,
+			);
+
+		if (
+			points === null ||
+			points === 0
+		) {
+			continue;
+		}
+
+		addRecordOccurrence(
+			occurrences,
+			points,
+
+			side === 1
+				? game.player1
+				: game.player2,
+
+			side === 1
 				? game.player2
 				: game.player1,
 

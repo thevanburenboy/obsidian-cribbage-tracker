@@ -1297,6 +1297,15 @@ function renderRecords(
 
 	renderGroupedRecordCard(
 		grid,
+		'Largest single-round count',
+		buildSingleRoundCountOccurrences(
+			hands,
+		),
+		'descending',
+	);
+
+	renderGroupedRecordCard(
+		grid,
 		'Highest Hands',
 		buildHighestHandOccurrences(
 			games,
@@ -2578,7 +2587,7 @@ function buildLowHighHandWinOccurrences(
 	return occurrences;
 }
 
-function getFinalCountPoints(
+function getRoundCountPoints(
 	hand: HandStatisticsRecord,
 	side: 1 | 2,
 ): number | null {
@@ -2594,6 +2603,21 @@ function getFinalCountPoints(
 		return null;
 	}
 
+	const dealer =
+		getHandDealer(
+			hand.firstDealer,
+			hand.handNumber,
+		);
+
+	/*
+	 * Pone only counts their hand,
+	 * so crib points do not need to
+	 * exist for their total to be known.
+	 */
+	if (dealer !== side) {
+		return handPoints;
+	}
+
 	if (
 		typeof hand.cribPoints !==
 		'number'
@@ -2601,18 +2625,59 @@ function getFinalCountPoints(
 		return null;
 	}
 
-	const dealer =
-		getHandDealer(
-			hand.firstDealer,
-			hand.handNumber,
-		);
-
 	return (
 		handPoints +
-		(dealer === side
-			? hand.cribPoints
-			: 0)
+		hand.cribPoints
 	);
+}
+
+function buildSingleRoundCountOccurrences(
+	hands: HandStatisticsRecord[],
+): RecordOccurrence[] {
+	const occurrences:
+		RecordOccurrence[] = [];
+
+	for (const hand of hands) {
+		const player1Points =
+			getRoundCountPoints(
+				hand,
+				1,
+			);
+
+		if (player1Points !== null) {
+			addRecordOccurrence(
+				occurrences,
+				player1Points,
+
+				hand.player1,
+				hand.player2,
+
+				hand.playedDate,
+				hand.playedTime,
+			);
+		}
+
+		const player2Points =
+			getRoundCountPoints(
+				hand,
+				2,
+			);
+
+		if (player2Points !== null) {
+			addRecordOccurrence(
+				occurrences,
+				player2Points,
+
+				hand.player2,
+				hand.player1,
+
+				hand.playedDate,
+				hand.playedTime,
+			);
+		}
+	}
+
+	return occurrences;
 }
 
 function buildFinalCountDeficitOccurrences(
@@ -2668,13 +2733,13 @@ function buildFinalCountDeficitOccurrences(
 				: 1;
 
 		const winnerFinalPoints =
-			getFinalCountPoints(
+			getRoundCountPoints(
 				finalHand,
 				winningSide,
 			);
 
 		const loserFinalPoints =
-			getFinalCountPoints(
+			getRoundCountPoints(
 				finalHand,
 				losingSide,
 			);
@@ -2792,7 +2857,7 @@ function buildFinalCountPointOccurrences(
 					: 1;
 
 		const points =
-			getFinalCountPoints(
+			getRoundCountPoints(
 				finalHand,
 				side,
 			);

@@ -1,6 +1,5 @@
 import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
-import sqlWasmBinary
-	from 'sql.js/dist/sql-wasm.wasm';
+import sqlWasmBinary from 'sql.js/dist/sql-wasm.wasm';
 import { normalizePath } from 'obsidian';
 import type CribbageTrackerPlugin from './main';
 
@@ -66,8 +65,8 @@ export interface GameHandSummary {
 	player1EligibleCribCount: number;
 	player2EligibleCribCount: number;
 
-    player1PeggingPointsTotal: number;
-    player2PeggingPointsTotal: number;
+	player1PeggingPointsTotal: number;
+	player2PeggingPointsTotal: number;
 
 	player1HighHandCalculated: number | null;
 	player2HighHandCalculated: number | null;
@@ -75,8 +74,8 @@ export interface GameHandSummary {
 
 export interface GameStatisticsRecord {
 	id: string;
-    playedDate: string;
-    playedTime: string;
+	playedDate: string;
+	playedTime: string;
 
 	player1: string;
 	player2: string;
@@ -133,11 +132,9 @@ export interface HandStatisticsRecord {
 	handDataIncomplete: boolean;
 }
 
-export type CustomMetricDataSource =
-	'games' | 'hands';
+export type CustomMetricDataSource = 'games' | 'hands';
 
-export type CustomMetricCalculationMode =
-	'builder' | 'sql';
+export type CustomMetricCalculationMode = 'builder' | 'sql';
 
 export type CustomMetricFormatMode =
 	| 'integer'
@@ -145,24 +142,20 @@ export type CustomMetricFormatMode =
 	| 'percentage'
 	| 'custom';
 
-export type CustomMetricMatchupMode =
-	'combined' | 'per_player';
+export type CustomMetricMatchupMode = 'combined' | 'per_player';
 
 export interface CustomMetricRecord {
 	id: string;
 	name: string;
 
-	dataSource:
-		CustomMetricDataSource;
+	dataSource: CustomMetricDataSource;
 
-	calculationMode:
-		CustomMetricCalculationMode;
+	calculationMode: CustomMetricCalculationMode;
 
 	builderFormula: string;
 	sqlQuery: string;
 
-	formatMode:
-		CustomMetricFormatMode;
+	formatMode: CustomMetricFormatMode;
 
 	decimalPlaces: number;
 
@@ -175,8 +168,7 @@ export interface CustomMetricRecord {
 	showPlayer: boolean;
 	showMatchup: boolean;
 
-	matchupMode:
-		CustomMetricMatchupMode;
+	matchupMode: CustomMetricMatchupMode;
 
 	enabled: boolean;
 	sortOrder: number;
@@ -185,17 +177,14 @@ export interface CustomMetricRecord {
 export interface CustomMetricInput {
 	name: string;
 
-	dataSource:
-		CustomMetricDataSource;
+	dataSource: CustomMetricDataSource;
 
-	calculationMode:
-		CustomMetricCalculationMode;
+	calculationMode: CustomMetricCalculationMode;
 
 	builderFormula: string;
 	sqlQuery: string;
 
-	formatMode:
-		CustomMetricFormatMode;
+	formatMode: CustomMetricFormatMode;
 
 	decimalPlaces: number;
 
@@ -208,8 +197,7 @@ export interface CustomMetricInput {
 	showPlayer: boolean;
 	showMatchup: boolean;
 
-	matchupMode:
-		CustomMetricMatchupMode;
+	matchupMode: CustomMetricMatchupMode;
 
 	enabled: boolean;
 	sortOrder: number;
@@ -276,10 +264,7 @@ export interface CustomMetricSqlHandObservation {
 }
 
 export interface CustomMetricSqlContext {
-	scope:
-		| 'global'
-		| 'player'
-		| 'matchup';
+	scope: 'global' | 'player' | 'matchup';
 
 	selectedPlayer: string | null;
 
@@ -312,23 +297,16 @@ export class CribbageDatabase {
 			this.db = null;
 		}
 
-        this.sql =
-            await initSqlJs({
-                wasmBinary:
-                    new Uint8Array(
-                        sqlWasmBinary,
-                    ).buffer,
-            });
+		this.sql = await initSqlJs({
+			wasmBinary: new Uint8Array(sqlWasmBinary).buffer,
+		});
 
 		const path = this.getDatabasePath();
 
 		if (await this.plugin.app.vault.adapter.exists(path)) {
-			const data =
-				await this.plugin.app.vault.adapter.readBinary(path);
+			const data = await this.plugin.app.vault.adapter.readBinary(path);
 
-			this.db = new this.sql.Database(
-				new Uint8Array(data),
-			);
+			this.db = new this.sql.Database(new Uint8Array(data));
 		} else {
 			this.db = new this.sql.Database();
 		}
@@ -351,10 +329,7 @@ export class CribbageDatabase {
 			data.byteOffset + data.byteLength,
 		) as ArrayBuffer;
 
-		await this.plugin.app.vault.adapter.writeBinary(
-			path,
-			buffer,
-		);
+		await this.plugin.app.vault.adapter.writeBinary(path, buffer);
 	}
 
 	close(): void {
@@ -376,9 +351,7 @@ export class CribbageDatabase {
 	getGameCount(): number {
 		const db = this.requireDb();
 
-		const result = db.exec(
-			'SELECT COUNT(*) FROM games;',
-		);
+		const result = db.exec('SELECT COUNT(*) FROM games;');
 
 		const value = result[0]?.values[0]?.[0];
 
@@ -411,10 +384,7 @@ export class CribbageDatabase {
 
 		return rows
 			.map((row) => row[0])
-			.filter(
-				(value): value is string =>
-					typeof value === 'string',
-			);
+			.filter((value): value is string => typeof value === 'string');
 	}
 
 	listGames(): GameRecord[] {
@@ -442,51 +412,33 @@ export class CribbageDatabase {
 
 		const rows = result[0]?.values ?? [];
 
-        return rows.map((row) => ({
-            id: String(row[0]),
-            playedDate: String(row[1]),
-            playedTime: String(row[2]),
-            player1: String(row[3] ?? ''),
-            player2: String(row[4] ?? ''),
+		return rows.map((row) => ({
+			id: String(row[0]),
+			playedDate: String(row[1]),
+			playedTime: String(row[2]),
+			player1: String(row[3] ?? ''),
+			player2: String(row[4] ?? ''),
 
-            firstDealer:
-                row[5] === 1
-                    ? 1
-                    : row[5] === 2
-                        ? 2
-                        : null,
+			firstDealer: row[5] === 1 ? 1 : row[5] === 2 ? 2 : null,
 
-            player1Score:
-                typeof row[6] === 'number'
-                    ? row[6]
-                    : null,
+			player1Score: typeof row[6] === 'number' ? row[6] : null,
 
-            player2Score:
-                typeof row[7] === 'number'
-                    ? row[7]
-                    : null,
+			player2Score: typeof row[7] === 'number' ? row[7] : null,
 
-            player1HighHandManual:
-                typeof row[8] === 'number'
-                    ? row[8]
-                    : null,
+			player1HighHandManual: typeof row[8] === 'number' ? row[8] : null,
 
-            player2HighHandManual:
-                typeof row[9] === 'number'
-                    ? row[9]
-                    : null,
+			player2HighHandManual: typeof row[9] === 'number' ? row[9] : null,
 
-            handDataIncomplete:
-                row[10] === 1,
-        }));
+			handDataIncomplete: row[10] === 1,
+		}));
 	}
 
 	async createGame(input: GameInput): Promise<string> {
 		const db = this.requireDb();
 		const id = this.createId();
 
-        db.run(
-            `
+		db.run(
+			`
             INSERT INTO games (
                 id,
                 played_date,
@@ -502,43 +454,41 @@ export class CribbageDatabase {
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             `,
-            [
-                id,
-                input.playedDate,
-                input.playedTime,
-                input.player1.trim(),
-                input.player2.trim(),
-                input.firstDealer,
-                input.player1Score,
-                input.player2Score,
-                input.player1HighHandManual,
-                input.player2HighHandManual,
-                input.handDataIncomplete ? 1 : 0,
-            ],
-        );
+			[
+				id,
+				input.playedDate,
+				input.playedTime,
+				input.player1.trim(),
+				input.player2.trim(),
+				input.firstDealer,
+				input.player1Score,
+				input.player2Score,
+				input.player1HighHandManual,
+				input.player2HighHandManual,
+				input.handDataIncomplete ? 1 : 0,
+			],
+		);
 
 		await this.save();
 
 		return id;
 	}
 
-    async createGames(
-        inputs: GameInput[],
-    ): Promise<number> {
-        if (inputs.length === 0) {
-            return 0;
-        }
+	async createGames(inputs: GameInput[]): Promise<number> {
+		if (inputs.length === 0) {
+			return 0;
+		}
 
-        const db = this.requireDb();
+		const db = this.requireDb();
 
-        db.run('BEGIN;');
+		db.run('BEGIN;');
 
-        try {
-            for (const input of inputs) {
-                const id = this.createId();
+		try {
+			for (const input of inputs) {
+				const id = this.createId();
 
-                db.run(
-                    `
+				db.run(
+					`
                     INSERT INTO games (
                         id,
                         played_date,
@@ -554,41 +504,38 @@ export class CribbageDatabase {
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                     `,
-                    [
-                        id,
-                        input.playedDate,
-                        input.playedTime,
-                        input.player1.trim(),
-                        input.player2.trim(),
-                        input.firstDealer,
-                        input.player1Score,
-                        input.player2Score,
-                        input.player1HighHandManual,
-                        input.player2HighHandManual,
-                        input.handDataIncomplete ? 1 : 0,
-                    ],
-                );
-            }
+					[
+						id,
+						input.playedDate,
+						input.playedTime,
+						input.player1.trim(),
+						input.player2.trim(),
+						input.firstDealer,
+						input.player1Score,
+						input.player2Score,
+						input.player1HighHandManual,
+						input.player2HighHandManual,
+						input.handDataIncomplete ? 1 : 0,
+					],
+				);
+			}
 
-            db.run('COMMIT;');
-        } catch (error) {
-            db.run('ROLLBACK;');
-            throw error;
-        }
+			db.run('COMMIT;');
+		} catch (error) {
+			db.run('ROLLBACK;');
+			throw error;
+		}
 
-        await this.save();
+		await this.save();
 
-        return inputs.length;
-    }
+		return inputs.length;
+	}
 
-	async updateGame(
-		id: string,
-		input: GameInput,
-	): Promise<void> {
+	async updateGame(id: string, input: GameInput): Promise<void> {
 		const db = this.requireDb();
 
-        db.run(
-            `
+		db.run(
+			`
             UPDATE games
             SET
                 played_date = ?,
@@ -603,59 +550,51 @@ export class CribbageDatabase {
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?;
             `,
-            [
-                input.playedDate,
-                input.playedTime,
-                input.player1.trim(),
-                input.player2.trim(),
-                input.firstDealer,
-                input.player1Score,
-                input.player2Score,
-                input.player1HighHandManual,
-                input.player2HighHandManual,
-                id,
-            ],
-        );
+			[
+				input.playedDate,
+				input.playedTime,
+				input.player1.trim(),
+				input.player2.trim(),
+				input.firstDealer,
+				input.player1Score,
+				input.player2Score,
+				input.player1HighHandManual,
+				input.player2HighHandManual,
+				id,
+			],
+		);
 		this.recalculateGameAggregates(id);
 
-        await this.save();
+		await this.save();
 	}
 
 	async deleteGame(id: string): Promise<void> {
 		const db = this.requireDb();
 
-		db.run(
-			'DELETE FROM games WHERE id = ?;',
-			[id],
-		);
+		db.run('DELETE FROM games WHERE id = ?;', [id]);
 
 		await this.save();
 	}
 
-    listHands(gameId: string): HandRecord[] {
-        const db = this.requireDb();
+	listHands(gameId: string): HandRecord[] {
+		const db = this.requireDb();
 
-        const gameResult = db.exec(
-            `
+		const gameResult = db.exec(
+			`
             SELECT first_dealer
             FROM games
             WHERE id = ?;
             `,
-            [gameId],
-        );
+			[gameId],
+		);
 
-        const firstDealerValue =
-            gameResult[0]?.values[0]?.[0];
+		const firstDealerValue = gameResult[0]?.values[0]?.[0];
 
-        const firstDealer: 1 | 2 | null =
-            firstDealerValue === 1
-                ? 1
-                : firstDealerValue === 2
-                    ? 2
-                    : null;
+		const firstDealer: 1 | 2 | null =
+			firstDealerValue === 1 ? 1 : firstDealerValue === 2 ? 2 : null;
 
-        const result = db.exec(
-            `
+		const result = db.exec(
+			`
             SELECT
                 id,
                 game_id,
@@ -667,113 +606,79 @@ export class CribbageDatabase {
             WHERE game_id = ?
             ORDER BY hand_number ASC;
             `,
-            [gameId],
-        );
+			[gameId],
+		);
 
-        const rows = result[0]?.values ?? [];
+		const rows = result[0]?.values ?? [];
 
-        const lastHandNumber =
-            rows.length > 0
-                ? Number(
-                        rows[
-                            rows.length - 1
-                        ]?.[2],
-                    )
-                : null;
+		const lastHandNumber =
+			rows.length > 0 ? Number(rows[rows.length - 1]?.[2]) : null;
 
-        return rows.map((row) => {
-            const handNumber =
-                Number(row[2]);
+		return rows.map((row) => {
+			const handNumber = Number(row[2]);
 
-            return {
-                id: String(row[0]),
-                gameId: String(row[1]),
-                handNumber,
+			return {
+				id: String(row[0]),
+				gameId: String(row[1]),
+				handNumber,
 
-                dealer:
-                    firstDealer === null
-                        ? null
-                        : this.getDealerForHand(
-                                firstDealer,
-                                handNumber,
-                            ),
+				dealer:
+					firstDealer === null
+						? null
+						: this.getDealerForHand(firstDealer, handNumber),
 
-                player1HandPoints:
-                    typeof row[3] === 'number'
-                        ? row[3]
-                        : null,
+				player1HandPoints: typeof row[3] === 'number' ? row[3] : null,
 
-                player2HandPoints:
-                    typeof row[4] === 'number'
-                        ? row[4]
-                        : null,
+				player2HandPoints: typeof row[4] === 'number' ? row[4] : null,
 
-                cribPoints:
-                    typeof row[5] === 'number'
-                        ? row[5]
-                        : null,
+				cribPoints: typeof row[5] === 'number' ? row[5] : null,
 
-                isLastHand:
-                    handNumber ===
-                    lastHandNumber,
-            };
-        });
-    }
+				isLastHand: handNumber === lastHandNumber,
+			};
+		});
+	}
 
-    async addHand(
-        gameId: string,
-        input: HandInput,
-    ): Promise<string> {
-        const db = this.requireDb();
+	async addHand(gameId: string, input: HandInput): Promise<string> {
+		const db = this.requireDb();
 
-        const gameResult = db.exec(
-            `
+		const gameResult = db.exec(
+			`
             SELECT first_dealer
             FROM games
             WHERE id = ?;
             `,
-            [gameId],
-        );
+			[gameId],
+		);
 
-        const gameRow =
-            gameResult[0]?.values[0];
+		const gameRow = gameResult[0]?.values[0];
 
-        if (!gameRow) {
-            throw new Error('Game not found.');
-        }
+		if (!gameRow) {
+			throw new Error('Game not found.');
+		}
 
-        if (
-            gameRow[0] !== 1 &&
-            gameRow[0] !== 2
-        ) {
-            throw new Error(
-                'First dealer must be known before adding hands.',
-            );
-        }
+		if (gameRow[0] !== 1 && gameRow[0] !== 2) {
+			throw new Error('First dealer must be known before adding hands.');
+		}
 
-        const numberResult = db.exec(
-            `
+		const numberResult = db.exec(
+			`
             SELECT
                 COALESCE(MAX(hand_number), 0) + 1
             FROM hands
             WHERE game_id = ?;
             `,
-            [gameId],
-        );
+			[gameId],
+		);
 
-        const handNumber =
-            Number(
-                numberResult[0]?.values[0]?.[0] ??
-                    1,
-            );
+		const handNumber = Number(numberResult[0]?.values[0]?.[0] ?? 1);
 
-        const id = this.createId();
+		const id = this.createId();
 
-        db.run('BEGIN;');
+		db.run('BEGIN;');
 
-        try {
-            db.run(
-                `
+		try {
+			db.run(
+				`
                 INSERT INTO hands (
                     id,
                     game_id,
@@ -784,58 +689,52 @@ export class CribbageDatabase {
                 )
                 VALUES (?, ?, ?, ?, ?, ?);
                 `,
-                [
-                    id,
-                    gameId,
-                    handNumber,
-                    input.player1HandPoints,
-                    input.player2HandPoints,
-                    input.cribPoints,
-                ],
-            );
+				[
+					id,
+					gameId,
+					handNumber,
+					input.player1HandPoints,
+					input.player2HandPoints,
+					input.cribPoints,
+				],
+			);
 
-            this.recalculateGameAggregates(
-                gameId,
-            );
+			this.recalculateGameAggregates(gameId);
 
-            db.run('COMMIT;');
-        } catch (error) {
-            db.run('ROLLBACK;');
-            throw error;
-        }
+			db.run('COMMIT;');
+		} catch (error) {
+			db.run('ROLLBACK;');
+			throw error;
+		}
 
-        await this.save();
+		await this.save();
 
-        return id;
-    }
+		return id;
+	}
 
-    async updateHand(
-        id: string,
-        input: HandInput,
-    ): Promise<void> {
-        const db = this.requireDb();
+	async updateHand(id: string, input: HandInput): Promise<void> {
+		const db = this.requireDb();
 
-        const result = db.exec(
-            `
+		const result = db.exec(
+			`
             SELECT game_id
             FROM hands
             WHERE id = ?;
             `,
-            [id],
-        );
+			[id],
+		);
 
-        const gameId =
-            result[0]?.values[0]?.[0];
+		const gameId = result[0]?.values[0]?.[0];
 
-        if (typeof gameId !== 'string') {
-            throw new Error('Hand not found.');
-        }
+		if (typeof gameId !== 'string') {
+			throw new Error('Hand not found.');
+		}
 
-        db.run('BEGIN;');
+		db.run('BEGIN;');
 
-        try {
-            db.run(
-                `
+		try {
+			db.run(
+				`
                 UPDATE hands
                 SET
                     player_1_hand_points = ?,
@@ -843,153 +742,131 @@ export class CribbageDatabase {
                     crib_points = ?
                 WHERE id = ?;
                 `,
-                [
-                    input.player1HandPoints,
-                    input.player2HandPoints,
-                    input.cribPoints,
-                    id,
-                ],
-            );
+				[
+					input.player1HandPoints,
+					input.player2HandPoints,
+					input.cribPoints,
+					id,
+				],
+			);
 
-            this.recalculateGameAggregates(
-                gameId,
-            );
+			this.recalculateGameAggregates(gameId);
 
-            db.run('COMMIT;');
-        } catch (error) {
-            db.run('ROLLBACK;');
-            throw error;
-        }
+			db.run('COMMIT;');
+		} catch (error) {
+			db.run('ROLLBACK;');
+			throw error;
+		}
 
-        await this.save();
-    }
+		await this.save();
+	}
 
-    async deleteHand(id: string): Promise<void> {
-        const db = this.requireDb();
+	async deleteHand(id: string): Promise<void> {
+		const db = this.requireDb();
 
-        const result = db.exec(
-            `
+		const result = db.exec(
+			`
             SELECT
                 game_id,
                 hand_number
             FROM hands
             WHERE id = ?;
             `,
-            [id],
-        );
+			[id],
+		);
 
-        const row =
-            result[0]?.values[0];
+		const row = result[0]?.values[0];
 
-        if (!row) {
-            throw new Error('Hand not found.');
-        }
+		if (!row) {
+			throw new Error('Hand not found.');
+		}
 
-        const gameId =
-            String(row[0]);
+		const gameId = String(row[0]);
 
-        const handNumber =
-            Number(row[1]);
+		const handNumber = Number(row[1]);
 
-        db.run('BEGIN;');
+		db.run('BEGIN;');
 
-        try {
-            db.run(
-                `
+		try {
+			db.run(
+				`
                 DELETE FROM hands
                 WHERE id = ?;
                 `,
-                [id],
-            );
+				[id],
+			);
 
-            /*
-            * Renumber later hands while avoiding the
-            * UNIQUE(game_id, hand_number) constraint.
-            *
-            * Example:
-            * 1, 2, 3, 4
-            * delete 2
-            *
-            * temporary:
-            * 1, -3, -4
-            *
-            * final:
-            * 1, 2, 3
-            */
-            db.run(
-                `
-                UPDATE hands
-                SET hand_number = -hand_number
-                WHERE
-                    game_id = ?
-                    AND hand_number > ?;
-                `,
-                [
-                    gameId,
-                    handNumber,
-                ],
-            );
+			const laterHands = db.exec(
+				`
+                    SELECT
+                        id,
+                        hand_number
+                    FROM hands
+                    WHERE
+                        game_id = ?
+                        AND hand_number > ?
+                    ORDER BY hand_number ASC;
+                    `,
+				[gameId, handNumber],
+			);
 
-            db.run(
-                `
-                UPDATE hands
-                SET hand_number =
-                    -hand_number - 1
-                WHERE
-                    game_id = ?
-                    AND hand_number < ?;
-                `,
-                [
-                    gameId,
-                    -handNumber,
-                ],
-            );
+			const laterRows = laterHands[0]?.values ?? [];
 
-            this.recalculateGameAggregates(
-                gameId,
-            );
+			for (const laterRow of laterRows) {
+				const laterId = String(laterRow[0]);
 
-            db.run('COMMIT;');
-        } catch (error) {
-            db.run('ROLLBACK;');
-            throw error;
-        }
+				const laterNumber = Number(laterRow[1]);
 
-        await this.save();
-    }
+				db.run(
+					`
+                    UPDATE hands
+                    SET hand_number = ?
+                    WHERE id = ?;
+                    `,
+					[laterNumber - 1, laterId],
+				);
+			}
 
-    async setHandDataIncomplete(
-        gameId: string,
-        incomplete: boolean,
-    ): Promise<void> {
-        const db = this.requireDb();
+			this.recalculateGameAggregates(gameId);
 
-        db.run(
-            `
+			db.run('COMMIT;');
+		} catch (error) {
+			db.run('ROLLBACK;');
+			throw error;
+		}
+
+		await this.save();
+	}
+
+	async setHandDataIncomplete(
+		gameId: string,
+		incomplete: boolean,
+	): Promise<void> {
+		const db = this.requireDb();
+
+		db.run(
+			`
             UPDATE games
             SET
                 hand_data_incomplete = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?;
             `,
-            [
-                incomplete ? 1 : 0,
-                gameId,
-            ],
-        );
+			[incomplete ? 1 : 0, gameId],
+		);
 
-        await this.save();
-    }
+		await this.save();
+	}
 
-    async setManualHighHands(
-        gameId: string,
-        player1High: number | null,
-        player2High: number | null,
-    ): Promise<void> {
-        const db = this.requireDb();
+	async setManualHighHands(
+		gameId: string,
+		player1High: number | null,
+		player2High: number | null,
+	): Promise<void> {
+		const db = this.requireDb();
 
-        db.run(
-            `
+		db.run(
+			`
             UPDATE games
             SET
                 player_1_high_hand_manual = ?,
@@ -997,20 +874,16 @@ export class CribbageDatabase {
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?;
             `,
-            [
-                player1High,
-                player2High,
-                gameId,
-            ],
-        );
+			[player1High, player2High, gameId],
+		);
 
-        await this.save();
-    }
+		await this.save();
+	}
 
-    listCustomMetrics(): CustomMetricRecord[] {
-        const db = this.requireDb();
+	listCustomMetrics(): CustomMetricRecord[] {
+		const db = this.requireDb();
 
-        const result = db.exec(`
+		const result = db.exec(`
             SELECT
                 id,
                 name,
@@ -1035,83 +908,59 @@ export class CribbageDatabase {
                 name COLLATE NOCASE ASC;
         `);
 
-        const rows =
-            result[0]?.values ?? [];
+		const rows = result[0]?.values ?? [];
 
-        return rows.map((row) => ({
-            id: String(row[0]),
+		return rows.map((row) => ({
+			id: String(row[0]),
 
-            name:
-                String(row[1] ?? ''),
+			name: String(row[1] ?? ''),
 
-            dataSource:
-                row[2] === 'hands'
-                    ? 'hands'
-                    : 'games',
+			dataSource: row[2] === 'hands' ? 'hands' : 'games',
 
-            calculationMode:
-                row[3] === 'sql'
-                    ? 'sql'
-                    : 'builder',
+			calculationMode: row[3] === 'sql' ? 'sql' : 'builder',
 
-            builderFormula:
-                String(row[4] ?? ''),
+			builderFormula: String(row[4] ?? ''),
 
-            sqlQuery:
-                String(row[5] ?? ''),
+			sqlQuery: String(row[5] ?? ''),
 
-            formatMode:
-                row[6] === 'integer'
-                    ? 'integer'
-                    : row[6] === 'percentage'
-                        ? 'percentage'
-                        : row[6] === 'custom'
-                            ? 'custom'
-                            : 'decimal',
+			formatMode:
+				row[6] === 'integer'
+					? 'integer'
+					: row[6] === 'percentage'
+						? 'percentage'
+						: row[6] === 'custom'
+							? 'custom'
+							: 'decimal',
 
-            decimalPlaces:
-                Number(row[7]),
+			decimalPlaces: Number(row[7]),
 
-            prefix:
-                String(row[8] ?? ''),
+			prefix: String(row[8] ?? ''),
 
-            suffix:
-                String(row[9] ?? ''),
+			suffix: String(row[9] ?? ''),
 
-            formatExpression:
-                String(row[10] ?? ''),
+			formatExpression: String(row[10] ?? ''),
 
-            showGlobal:
-                row[11] === 1,
+			showGlobal: row[11] === 1,
 
-            showPlayer:
-                row[12] === 1,
+			showPlayer: row[12] === 1,
 
-            showMatchup:
-                row[13] === 1,
+			showMatchup: row[13] === 1,
 
-            matchupMode:
-                row[14] === 'per_player'
-                    ? 'per_player'
-                    : 'combined',
+			matchupMode: row[14] === 'per_player' ? 'per_player' : 'combined',
 
-            enabled:
-                row[15] === 1,
+			enabled: row[15] === 1,
 
-            sortOrder:
-                Number(row[16]),
-        }));
-    }
+			sortOrder: Number(row[16]),
+		}));
+	}
 
-    async createCustomMetric(
-        input: CustomMetricInput,
-    ): Promise<string> {
-        const db = this.requireDb();
+	async createCustomMetric(input: CustomMetricInput): Promise<string> {
+		const db = this.requireDb();
 
-        const id = this.createId();
+		const id = this.createId();
 
-        db.run(
-            `
+		db.run(
+			`
             INSERT INTO custom_metrics (
                 id,
                 name,
@@ -1136,48 +985,48 @@ export class CribbageDatabase {
                 ?, ?, ?, ?, ?, ?, ?, ?
             );
             `,
-            [
-                id,
-                input.name.trim(),
+			[
+				id,
+				input.name.trim(),
 
-                input.dataSource,
-                input.calculationMode,
+				input.dataSource,
+				input.calculationMode,
 
-                input.builderFormula,
-                input.sqlQuery,
+				input.builderFormula,
+				input.sqlQuery,
 
-                input.formatMode,
-                input.decimalPlaces,
+				input.formatMode,
+				input.decimalPlaces,
 
-                input.prefix,
-                input.suffix,
+				input.prefix,
+				input.suffix,
 
-                input.formatExpression,
+				input.formatExpression,
 
-                input.showGlobal ? 1 : 0,
-                input.showPlayer ? 1 : 0,
-                input.showMatchup ? 1 : 0,
+				input.showGlobal ? 1 : 0,
+				input.showPlayer ? 1 : 0,
+				input.showMatchup ? 1 : 0,
 
-                input.matchupMode,
+				input.matchupMode,
 
-                input.enabled ? 1 : 0,
-                input.sortOrder,
-            ],
-        );
+				input.enabled ? 1 : 0,
+				input.sortOrder,
+			],
+		);
 
-        await this.save();
+		await this.save();
 
-        return id;
-    }
+		return id;
+	}
 
-    async updateCustomMetric(
-        id: string,
-        input: CustomMetricInput,
-    ): Promise<void> {
-        const db = this.requireDb();
+	async updateCustomMetric(
+		id: string,
+		input: CustomMetricInput,
+	): Promise<void> {
+		const db = this.requireDb();
 
-        db.run(
-            `
+		db.run(
+			`
             UPDATE custom_metrics
             SET
                 name = ?,
@@ -1199,97 +1048,84 @@ export class CribbageDatabase {
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?;
             `,
-            [
-                input.name.trim(),
+			[
+				input.name.trim(),
 
-                input.dataSource,
-                input.calculationMode,
+				input.dataSource,
+				input.calculationMode,
 
-                input.builderFormula,
-                input.sqlQuery,
+				input.builderFormula,
+				input.sqlQuery,
 
-                input.formatMode,
-                input.decimalPlaces,
+				input.formatMode,
+				input.decimalPlaces,
 
-                input.prefix,
-                input.suffix,
+				input.prefix,
+				input.suffix,
 
-                input.formatExpression,
+				input.formatExpression,
 
-                input.showGlobal ? 1 : 0,
-                input.showPlayer ? 1 : 0,
-                input.showMatchup ? 1 : 0,
+				input.showGlobal ? 1 : 0,
+				input.showPlayer ? 1 : 0,
+				input.showMatchup ? 1 : 0,
 
-                input.matchupMode,
+				input.matchupMode,
 
-                input.enabled ? 1 : 0,
-                input.sortOrder,
+				input.enabled ? 1 : 0,
+				input.sortOrder,
 
-                id,
-            ],
-        );
+				id,
+			],
+		);
 
-        await this.save();
-    }
+		await this.save();
+	}
 
-    async deleteCustomMetric(
-        id: string,
-    ): Promise<void> {
-        const db = this.requireDb();
+	async deleteCustomMetric(id: string): Promise<void> {
+		const db = this.requireDb();
 
-        db.run(
-            `
+		db.run(
+			`
             DELETE FROM custom_metrics
             WHERE id = ?;
             `,
-            [id],
-        );
+			[id],
+		);
 
-        await this.save();
-    }
+		await this.save();
+	}
 
-    evaluateCustomMetricSql(
-        query: string,
+	evaluateCustomMetricSql(
+		query: string,
 
-        observations:
-            CustomMetricSqlObservation[],
+		observations: CustomMetricSqlObservation[],
 
-        handObservations:
-            CustomMetricSqlHandObservation[],
+		handObservations: CustomMetricSqlHandObservation[],
 
-        context:
-            CustomMetricSqlContext,
-    ): CustomMetricSqlResult {
-        const db =
-            this.requireDb();
+		context: CustomMetricSqlContext,
+	): CustomMetricSqlResult {
+		const db = this.requireDb();
 
-        if (!this.sql) {
-            return {
-                value: null,
-                error:
-                    'SQL.js is not initialized.',
-            };
-        }
+		if (!this.sql) {
+			return {
+				value: null,
+				error: 'SQL.js is not initialized.',
+			};
+		}
 
-        const exported =
-            db.export();
+		const exported = db.export();
 
-        const clone =
-            new this.sql.Database(
-                new Uint8Array(
-                    exported,
-                ),
-            );
+		const clone = new this.sql.Database(new Uint8Array(exported));
 
-        try {
-            /*
-            * Scope-aware normalized player/game
-            * observations.
-            *
-            * This is a TEMP table, so it exists only
-            * inside this disposable database clone.
-            */
-            clone.run(`
+		try {
+			/*
+			 * Scope-aware normalized player/game
+			 * observations.
+			 *
+			 * This is a TEMP table, so it exists only
+			 * inside this disposable database clone.
+			 */
+			clone.run(`
                 CREATE TEMP TABLE metric_games (
                     game_id TEXT NOT NULL,
 
@@ -1325,11 +1161,11 @@ export class CribbageDatabase {
                 );
             `);
 
-            /*
-            * Gives advanced SQL access to the current
-            * evaluation context if desired.
-            */
-            clone.run(`
+			/*
+			 * Gives advanced SQL access to the current
+			 * evaluation context if desired.
+			 */
+			clone.run(`
                 CREATE TEMP TABLE metric_context (
                     scope TEXT NOT NULL,
 
@@ -1342,8 +1178,8 @@ export class CribbageDatabase {
                 );
             `);
 
-            clone.run(
-                `
+			clone.run(
+				`
                 INSERT INTO metric_context (
                     scope,
                     selected_player,
@@ -1353,17 +1189,16 @@ export class CribbageDatabase {
                 )
                 VALUES (?, ?, ?, ?, ?);
                 `,
-                [
-                    context.scope,
-                    context.selectedPlayer,
-                    context.matchupPlayer1,
-                    context.matchupPlayer2,
-                    context.subjectPlayer,
-                ],
-            );
+				[
+					context.scope,
+					context.selectedPlayer,
+					context.matchupPlayer1,
+					context.matchupPlayer2,
+					context.subjectPlayer,
+				],
+			);
 
-            const insert =
-                clone.prepare(`
+			const insert = clone.prepare(`
                     INSERT INTO metric_games (
                         game_id,
 
@@ -1404,49 +1239,46 @@ export class CribbageDatabase {
                     );
                 `);
 
-            try {
-                for (
-                    const observation
-                    of observations
-                ) {
-                    insert.run([
-                        observation.gameId,
+			try {
+				for (const observation of observations) {
+					insert.run([
+						observation.gameId,
 
-                        observation.playedDate,
-                        observation.playedTime,
+						observation.playedDate,
+						observation.playedTime,
 
-                        observation.player,
-                        observation.opponent,
+						observation.player,
+						observation.opponent,
 
-                        observation.playerSide,
+						observation.playerSide,
 
-                        observation.score,
-                        observation.opponentScore,
+						observation.score,
+						observation.opponentScore,
 
-                        observation.margin,
-                        observation.scoreDifferential,
+						observation.margin,
+						observation.scoreDifferential,
 
-                        observation.won,
-                        observation.lost,
+						observation.won,
+						observation.lost,
 
-                        observation.highHand,
-                        observation.opponentHighHand,
-                        observation.higherHighHand,
+						observation.highHand,
+						observation.opponentHighHand,
+						observation.higherHighHand,
 
-                        observation.dealerFirst,
-                        observation.poneFirst,
+						observation.dealerFirst,
+						observation.poneFirst,
 
-                        observation.skunk,
-                        observation.doubleSkunk,
+						observation.skunk,
+						observation.doubleSkunk,
 
-                        observation.handDataComplete,
-                    ]);
-                }
-            } finally {
-                insert.free();
-            }
+						observation.handDataComplete,
+					]);
+				}
+			} finally {
+				insert.free();
+			}
 
-            clone.run(`
+			clone.run(`
                 CREATE TEMP TABLE metric_hands (
                     game_id TEXT NOT NULL,
                     hand_id TEXT NOT NULL,
@@ -1477,8 +1309,7 @@ export class CribbageDatabase {
                 );
             `);
 
-            const handInsert =
-                clone.prepare(`
+			const handInsert = clone.prepare(`
                     INSERT INTO metric_hands (
                         game_id,
                         hand_id,
@@ -1513,141 +1344,121 @@ export class CribbageDatabase {
                     );
                 `);
 
-            try {
-                for (
-                    const observation
-                    of handObservations
-                ) {
-                    handInsert.run([
-                        observation.gameId,
-                        observation.handId,
+			try {
+				for (const observation of handObservations) {
+					handInsert.run([
+						observation.gameId,
+						observation.handId,
 
-                        observation.playedDate,
-                        observation.playedTime,
+						observation.playedDate,
+						observation.playedTime,
 
-                        observation.player,
-                        observation.opponent,
+						observation.player,
+						observation.opponent,
 
-                        observation.playerSide,
+						observation.playerSide,
 
-                        observation.handNumber,
+						observation.handNumber,
 
-                        observation.handPoints,
-                        observation.opponentHandPoints,
+						observation.handPoints,
+						observation.opponentHandPoints,
 
-                        observation.cribPoints,
-                        observation.roundCribPoints,
+						observation.cribPoints,
+						observation.roundCribPoints,
 
-                        observation.dealer,
-                        observation.pone,
+						observation.dealer,
+						observation.pone,
 
-                        observation.lastHand,
-                        observation.eligibleHand,
+						observation.lastHand,
+						observation.eligibleHand,
 
-                        observation.handDataComplete,
-                    ]);
-                }
-            } finally {
-                handInsert.free();
-            }
+						observation.handDataComplete,
+					]);
+				}
+			} finally {
+				handInsert.free();
+			}
 
-            const statement =
-                clone.prepare(query);
+			const statement = clone.prepare(query);
 
-            try {
-                if (!statement.step()) {
-                    return {
-                        value: null,
-                        error:
-                            'SQL query returned no rows. A custom metric must return exactly one row and one numeric column.',
-                    };
-                }
+			try {
+				if (!statement.step()) {
+					return {
+						value: null,
+						error: 'SQL query returned no rows. A custom metric must return exactly one row and one numeric column.',
+					};
+				}
 
-                const columns =
-                    statement.getColumnNames();
+				const columns = statement.getColumnNames();
 
-                if (
-                    columns.length !== 1
-                ) {
-                    return {
-                        value: null,
-                        error:
-                            `SQL query returned ${columns.length} columns. A custom metric must return exactly one column.`,
-                    };
-                }
+				if (columns.length !== 1) {
+					return {
+						value: null,
+						error: `SQL query returned ${columns.length} columns. A custom metric must return exactly one column.`,
+					};
+				}
 
-                const row =
-                    statement.get();
+				const row = statement.get();
 
-                const raw =
-                    row[0] ?? null;
+				const raw = row[0] ?? null;
 
-                /*
-                * Check for another row before returning.
-                */
-                if (statement.step()) {
-                    return {
-                        value: null,
-                        error:
-                            'SQL query returned more than one row. A custom metric must return exactly one row.',
-                    };
-                }
+				/*
+				 * Check for another row before returning.
+				 */
+				if (statement.step()) {
+					return {
+						value: null,
+						error: 'SQL query returned more than one row. A custom metric must return exactly one row.',
+					};
+				}
 
-                if (raw === null) {
-                    return {
-                        value: null,
-                        error: null,
-                    };
-                }
+				if (raw === null) {
+					return {
+						value: null,
+						error: null,
+					};
+				}
 
-                if (
-                    typeof raw !== 'number'
-                ) {
-                    return {
-                        value: null,
-                        error:
-                            'SQL query did not return a numeric value.',
-                    };
-                }
+				if (typeof raw !== 'number') {
+					return {
+						value: null,
+						error: 'SQL query did not return a numeric value.',
+					};
+				}
 
-                if (
-                    !Number.isFinite(raw)
-                ) {
-                    return {
-                        value: null,
-                        error:
-                            'SQL query returned a non-finite number.',
-                    };
-                }
+				if (!Number.isFinite(raw)) {
+					return {
+						value: null,
+						error: 'SQL query returned a non-finite number.',
+					};
+				}
 
-                return {
-                    value: raw,
-                    error: null,
-                };
-            } finally {
-                statement.free();
-            }
-        } catch (error) {
-            return {
-                value: null,
+				return {
+					value: raw,
+					error: null,
+				};
+			} finally {
+				statement.free();
+			}
+		} catch (error) {
+			return {
+				value: null,
 
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : 'Advanced SQL evaluation failed.',
-            };
-        } finally {
-            clone.close();
-        }
-    }
+				error:
+					error instanceof Error
+						? error.message
+						: 'Advanced SQL evaluation failed.',
+			};
+		} finally {
+			clone.close();
+		}
+	}
 
-    getGameHandSummary(
-        gameId: string,
-    ): GameHandSummary {
-        const db = this.requireDb();
+	getGameHandSummary(gameId: string): GameHandSummary {
+		const db = this.requireDb();
 
-        const result = db.exec(
-            `
+		const result = db.exec(
+			`
             SELECT
                 round_count,
                 eligible_round_count,
@@ -1680,62 +1491,54 @@ export class CribbageDatabase {
             FROM games
             WHERE id = ?;
             `,
-            [gameId],
-        );
+			[gameId],
+		);
 
-        const row = result[0]?.values[0];
+		const row = result[0]?.values[0];
 
-        if (!row) {
-            throw new Error('Game not found.');
-        }
+		if (!row) {
+			throw new Error('Game not found.');
+		}
 
-        return {
-            roundCount: Number(row[0]),
-            eligibleRoundCount: Number(row[1]),
+		return {
+			roundCount: Number(row[0]),
+			eligibleRoundCount: Number(row[1]),
 
-            player1HandPointsTotal: Number(row[2]),
-            player2HandPointsTotal: Number(row[3]),
+			player1HandPointsTotal: Number(row[2]),
+			player2HandPointsTotal: Number(row[3]),
 
-            player1HandPointsEligible: Number(row[4]),
-            player2HandPointsEligible: Number(row[5]),
+			player1HandPointsEligible: Number(row[4]),
+			player2HandPointsEligible: Number(row[5]),
 
-            player1CribPointsTotal: Number(row[6]),
-            player2CribPointsTotal: Number(row[7]),
+			player1CribPointsTotal: Number(row[6]),
+			player2CribPointsTotal: Number(row[7]),
 
-            player1CribPointsEligible: Number(row[8]),
-            player2CribPointsEligible: Number(row[9]),
+			player1CribPointsEligible: Number(row[8]),
+			player2CribPointsEligible: Number(row[9]),
 
-            player1CribCount: Number(row[10]),
-            player2CribCount: Number(row[11]),
+			player1CribCount: Number(row[10]),
+			player2CribCount: Number(row[11]),
 
-            player1EligibleCribCount:
-                Number(row[12]),
+			player1EligibleCribCount: Number(row[12]),
 
-            player2EligibleCribCount:
-                Number(row[13]),
+			player2EligibleCribCount: Number(row[13]),
 
-            player1PeggingPointsTotal:
-                Number(row[14]),
+			player1PeggingPointsTotal: Number(row[14]),
 
-            player2PeggingPointsTotal:
-                Number(row[15]),
+			player2PeggingPointsTotal: Number(row[15]),
 
-            player1HighHandCalculated:
-                typeof row[16] === 'number'
-                    ? row[16]
-                    : null,
+			player1HighHandCalculated:
+				typeof row[16] === 'number' ? row[16] : null,
 
-            player2HighHandCalculated:
-                typeof row[17] === 'number'
-                    ? row[17]
-                    : null,
-        };
-    }
+			player2HighHandCalculated:
+				typeof row[17] === 'number' ? row[17] : null,
+		};
+	}
 
-    listGamesForStatistics(): GameStatisticsRecord[] {
-        const db = this.requireDb();
+	listGamesForStatistics(): GameStatisticsRecord[] {
+		const db = this.requireDb();
 
-        const result = db.exec(`
+		const result = db.exec(`
             SELECT
                 id,
 
@@ -1776,101 +1579,63 @@ export class CribbageDatabase {
             FROM games;
         `);
 
-        const rows =
-            result[0]?.values ?? [];
+		const rows = result[0]?.values ?? [];
 
-        return rows.map((row) => ({
-            id: String(row[0]),
+		return rows.map((row) => ({
+			id: String(row[0]),
 
-            player1:
-                String(row[1] ?? ''),
+			player1: String(row[1] ?? ''),
 
-            player2:
-                String(row[2] ?? ''),
+			player2: String(row[2] ?? ''),
 
-            firstDealer:
-                row[3] === 1
-                    ? 1
-                    : row[3] === 2
-                        ? 2
-                        : null,
+			firstDealer: row[3] === 1 ? 1 : row[3] === 2 ? 2 : null,
 
-            player1Score:
-                typeof row[4] === 'number'
-                    ? row[4]
-                    : null,
+			player1Score: typeof row[4] === 'number' ? row[4] : null,
 
-            player2Score:
-                typeof row[5] === 'number'
-                    ? row[5]
-                    : null,
+			player2Score: typeof row[5] === 'number' ? row[5] : null,
 
-            player1HighHandManual:
-                typeof row[6] === 'number'
-                    ? row[6]
-                    : null,
+			player1HighHandManual: typeof row[6] === 'number' ? row[6] : null,
 
-            player2HighHandManual:
-                typeof row[7] === 'number'
-                    ? row[7]
-                    : null,
+			player2HighHandManual: typeof row[7] === 'number' ? row[7] : null,
 
-            player1HighHandCalculated:
-                typeof row[8] === 'number'
-                    ? row[8]
-                    : null,
+			player1HighHandCalculated:
+				typeof row[8] === 'number' ? row[8] : null,
 
-            player2HighHandCalculated:
-                typeof row[9] === 'number'
-                    ? row[9]
-                    : null,
+			player2HighHandCalculated:
+				typeof row[9] === 'number' ? row[9] : null,
 
-            handDataIncomplete:
-                row[10] === 1,
+			handDataIncomplete: row[10] === 1,
 
-            roundCount:
-                Number(row[11]),
+			roundCount: Number(row[11]),
 
-            eligibleRoundCount:
-                Number(row[12]),
+			eligibleRoundCount: Number(row[12]),
 
-            player1HandPointsEligible:
-                Number(row[13]),
+			player1HandPointsEligible: Number(row[13]),
 
-            player2HandPointsEligible:
-                Number(row[14]),
+			player2HandPointsEligible: Number(row[14]),
 
-            player1CribPointsEligible:
-                Number(row[15]),
+			player1CribPointsEligible: Number(row[15]),
 
-            player2CribPointsEligible:
-                Number(row[16]),
+			player2CribPointsEligible: Number(row[16]),
 
-            player1EligibleCribCount:
-                Number(row[17]),
+			player1EligibleCribCount: Number(row[17]),
 
-            player2EligibleCribCount:
-                Number(row[18]),
+			player2EligibleCribCount: Number(row[18]),
 
-            player1PeggingPointsTotal:
-                Number(row[19]),
+			player1PeggingPointsTotal: Number(row[19]),
 
-            player2PeggingPointsTotal:
-                Number(row[20]),
+			player2PeggingPointsTotal: Number(row[20]),
 
-            playedDate:
-                String(row[21]),
+			playedDate: String(row[21]),
 
-            playedTime:
-                String(row[22]),
-        }));
-    }
+			playedTime: String(row[22]),
+		}));
+	}
 
-    listHandsForStatistics():
-        HandStatisticsRecord[] {
-        const db = this.requireDb();
+	listHandsForStatistics(): HandStatisticsRecord[] {
+		const db = this.requireDb();
 
-        const result = db.exec(`
+		const result = db.exec(`
             SELECT
                 h.id,
                 h.game_id,
@@ -1913,80 +1678,58 @@ export class CribbageDatabase {
                 h.hand_number ASC;
         `);
 
-        const rows =
-            result[0]?.values ?? [];
+		const rows = result[0]?.values ?? [];
 
-        return rows.flatMap((row) => {
-            const firstDealer =
-                row[8] === 1
-                    ? 1
-                    : row[8] === 2
-                        ? 2
-                        : null;
+		return rows.flatMap((row) => {
+			const firstDealer = row[8] === 1 ? 1 : row[8] === 2 ? 2 : null;
 
-            /*
-            * Hands should only exist when the
-            * first dealer is known.
-            */
-            if (firstDealer === null) {
-                return [];
-            }
+			/*
+			 * Hands should only exist when the
+			 * first dealer is known.
+			 */
+			if (firstDealer === null) {
+				return [];
+			}
 
-            return [{
-                id:
-                    String(row[0]),
+			return [
+				{
+					id: String(row[0]),
 
-                gameId:
-                    String(row[1]),
+					gameId: String(row[1]),
 
-                playedDate:
-                    String(row[2]),
+					playedDate: String(row[2]),
 
-                playedTime:
-                    String(row[3]),
+					playedTime: String(row[3]),
 
-                handNumber:
-                    Number(row[4]),
+					handNumber: Number(row[4]),
 
-                isLastHand:
-                    row[5] === 1,
+					isLastHand: row[5] === 1,
 
-                player1:
-                    String(row[6] ?? ''),
+					player1: String(row[6] ?? ''),
 
-                player2:
-                    String(row[7] ?? ''),
+					player2: String(row[7] ?? ''),
 
-                firstDealer,
+					firstDealer,
 
-                player1HandPoints:
-                    typeof row[9] === 'number'
-                        ? row[9]
-                        : null,
+					player1HandPoints:
+						typeof row[9] === 'number' ? row[9] : null,
 
-                player2HandPoints:
-                    typeof row[10] === 'number'
-                        ? row[10]
-                        : null,
+					player2HandPoints:
+						typeof row[10] === 'number' ? row[10] : null,
 
-                cribPoints:
-                    typeof row[11] === 'number'
-                        ? row[11]
-                        : null,
+					cribPoints: typeof row[11] === 'number' ? row[11] : null,
 
-                handDataIncomplete:
-                    row[12] === 1,
-            }];
-        });
-    }
+					handDataIncomplete: row[12] === 1,
+				},
+			];
+		});
+	}
 
-    private recalculateGameAggregates(
-        gameId: string,
-    ): void {
-        const db = this.requireDb();
+	private recalculateGameAggregates(gameId: string): void {
+		const db = this.requireDb();
 
-        const gameResult = db.exec(
-            `
+		const gameResult = db.exec(
+			`
             SELECT
                 first_dealer,
                 player_1_score,
@@ -1994,37 +1737,26 @@ export class CribbageDatabase {
             FROM games
             WHERE id = ?;
             `,
-            [gameId],
-        );
+			[gameId],
+		);
 
-        const firstDealerValue =
-            gameResult[0]?.values[0]?.[0];
+		const firstDealerValue = gameResult[0]?.values[0]?.[0];
 
-        const firstDealer: 1 | 2 | null =
-            firstDealerValue === 1
-                ? 1
-                : firstDealerValue === 2
-                    ? 2
-                    : null;
+		const firstDealer: 1 | 2 | null =
+			firstDealerValue === 1 ? 1 : firstDealerValue === 2 ? 2 : null;
 
-        const player1ScoreValue =
-            gameResult[0]?.values[0]?.[1];
+		const player1ScoreValue = gameResult[0]?.values[0]?.[1];
 
-        const player2ScoreValue =
-            gameResult[0]?.values[0]?.[2];
+		const player2ScoreValue = gameResult[0]?.values[0]?.[2];
 
-        const player1Score =
-            typeof player1ScoreValue === 'number'
-                ? player1ScoreValue
-                : null;
+		const player1Score =
+			typeof player1ScoreValue === 'number' ? player1ScoreValue : null;
 
-        const player2Score =
-            typeof player2ScoreValue === 'number'
-                ? player2ScoreValue
-                : null;
+		const player2Score =
+			typeof player2ScoreValue === 'number' ? player2ScoreValue : null;
 
-        const result = db.exec(
-            `
+		const result = db.exec(
+			`
             SELECT
                 hand_number,
                 player_1_hand_points,
@@ -2034,15 +1766,14 @@ export class CribbageDatabase {
             WHERE game_id = ?
             ORDER BY hand_number ASC;
             `,
-            [gameId],
-        );
+			[gameId],
+		);
 
-        const rows =
-            result[0]?.values ?? [];
+		const rows = result[0]?.values ?? [];
 
-        if (rows.length === 0) {
-            db.run(
-                `
+		if (rows.length === 0) {
+			db.run(
+				`
                 UPDATE games
                 SET
                     player_1_hand_points_total = 0,
@@ -2075,156 +1806,112 @@ export class CribbageDatabase {
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?;
                 `,
-                [gameId],
-            );
+				[gameId],
+			);
 
-            return;
-        }
+			return;
+		}
 
-        const lastHandNumber =
-            Number(
-                rows[
-                    rows.length - 1
-                ]?.[0],
-            );
+		const lastHandNumber = Number(rows[rows.length - 1]?.[0]);
 
-        let player1HandTotal = 0;
-        let player2HandTotal = 0;
+		let player1HandTotal = 0;
+		let player2HandTotal = 0;
 
-        let player1HandEligible = 0;
-        let player2HandEligible = 0;
+		let player1HandEligible = 0;
+		let player2HandEligible = 0;
 
-        let player1CribTotal = 0;
-        let player2CribTotal = 0;
+		let player1CribTotal = 0;
+		let player2CribTotal = 0;
 
-        let player1CribEligible = 0;
-        let player2CribEligible = 0;
+		let player1CribEligible = 0;
+		let player2CribEligible = 0;
 
-        let player1CribCount = 0;
-        let player2CribCount = 0;
+		let player1CribCount = 0;
+		let player2CribCount = 0;
 
-        let player1EligibleCribCount = 0;
-        let player2EligibleCribCount = 0;
+		let player1EligibleCribCount = 0;
+		let player2EligibleCribCount = 0;
 
-        let player1HighHand:
-            number | null = null;
+		let player1HighHand: number | null = null;
 
-        let player2HighHand:
-            number | null = null;
+		let player2HighHand: number | null = null;
 
-        for (const row of rows) {
-            const handNumber =
-                Number(row[0]);
+		for (const row of rows) {
+			const handNumber = Number(row[0]);
 
-            const player1Points =
-                typeof row[1] === 'number'
-                    ? row[1]
-                    : null;
+			const player1Points = typeof row[1] === 'number' ? row[1] : null;
 
-            const player2Points =
-                typeof row[2] === 'number'
-                    ? row[2]
-                    : null;
+			const player2Points = typeof row[2] === 'number' ? row[2] : null;
 
-            const cribPoints =
-                typeof row[3] === 'number'
-                    ? row[3]
-                    : null;
+			const cribPoints = typeof row[3] === 'number' ? row[3] : null;
 
-            const eligible =
-                handNumber !==
-                lastHandNumber;
+			const eligible = handNumber !== lastHandNumber;
 
-            if (player1Points !== null) {
-                player1HandTotal +=
-                    player1Points;
+			if (player1Points !== null) {
+				player1HandTotal += player1Points;
 
-                player1HighHand =
-                    player1HighHand === null
-                        ? player1Points
-                        : Math.max(
-                                player1HighHand,
-                                player1Points,
-                            );
+				player1HighHand =
+					player1HighHand === null
+						? player1Points
+						: Math.max(player1HighHand, player1Points);
 
-                if (eligible) {
-                    player1HandEligible +=
-                        player1Points;
-                }
-            }
+				if (eligible) {
+					player1HandEligible += player1Points;
+				}
+			}
 
-            if (player2Points !== null) {
-                player2HandTotal +=
-                    player2Points;
+			if (player2Points !== null) {
+				player2HandTotal += player2Points;
 
-                player2HighHand =
-                    player2HighHand === null
-                        ? player2Points
-                        : Math.max(
-                                player2HighHand,
-                                player2Points,
-                            );
+				player2HighHand =
+					player2HighHand === null
+						? player2Points
+						: Math.max(player2HighHand, player2Points);
 
-                if (eligible) {
-                    player2HandEligible +=
-                        player2Points;
-                }
-            }
+				if (eligible) {
+					player2HandEligible += player2Points;
+				}
+			}
 
-            if (
-                cribPoints !== null &&
-                firstDealer !== null
-            ) {
-                const dealer =
-                    this.getDealerForHand(
-                        firstDealer,
-                        handNumber,
-                    );
+			if (cribPoints !== null && firstDealer !== null) {
+				const dealer = this.getDealerForHand(firstDealer, handNumber);
 
-                if (dealer === 1) {
-                    player1CribTotal +=
-                        cribPoints;
+				if (dealer === 1) {
+					player1CribTotal += cribPoints;
 
-                    player1CribCount++;
+					player1CribCount++;
 
-                    if (eligible) {
-                        player1CribEligible +=
-                            cribPoints;
+					if (eligible) {
+						player1CribEligible += cribPoints;
 
-                        player1EligibleCribCount++;
-                    }
-                } else {
-                    player2CribTotal +=
-                        cribPoints;
+						player1EligibleCribCount++;
+					}
+				} else {
+					player2CribTotal += cribPoints;
 
-                    player2CribCount++;
+					player2CribCount++;
 
-                    if (eligible) {
-                        player2CribEligible +=
-                            cribPoints;
+					if (eligible) {
+						player2CribEligible += cribPoints;
 
-                        player2EligibleCribCount++;
-                    }
-                }
-            }
-        }
+						player2EligibleCribCount++;
+					}
+				}
+			}
+		}
 
-        const player1PeggingPoints =
-            player1Score === null
-                ? 0
-                : player1Score
-                    - player1HandTotal
-                    - player1CribTotal;
+		const player1PeggingPoints =
+			player1Score === null
+				? 0
+				: player1Score - player1HandTotal - player1CribTotal;
 
-        const player2PeggingPoints =
-            player2Score === null
-                ? 0
-                : player2Score
-                    - player2HandTotal
-                    - player2CribTotal;
+		const player2PeggingPoints =
+			player2Score === null
+				? 0
+				: player2Score - player2HandTotal - player2CribTotal;
 
-        db.run(
-            `
+		db.run(
+			`
             UPDATE games
             SET
                 player_1_hand_points_total = ?,
@@ -2257,78 +1944,68 @@ export class CribbageDatabase {
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?;
             `,
-            [
-                player1HandTotal,
-                player2HandTotal,
+			[
+				player1HandTotal,
+				player2HandTotal,
 
-                player1HandEligible,
-                player2HandEligible,
+				player1HandEligible,
+				player2HandEligible,
 
-                player1CribTotal,
-                player2CribTotal,
+				player1CribTotal,
+				player2CribTotal,
 
-                player1CribEligible,
-                player2CribEligible,
+				player1CribEligible,
+				player2CribEligible,
 
-                rows.length,
-                Math.max(
-                    rows.length - 1,
-                    0,
-                ),
+				rows.length,
+				Math.max(rows.length - 1, 0),
 
-                player1CribCount,
-                player2CribCount,
+				player1CribCount,
+				player2CribCount,
 
-                player1EligibleCribCount,
-                player2EligibleCribCount,
+				player1EligibleCribCount,
+				player2EligibleCribCount,
 
-                player1HighHand,
-                player2HighHand,
+				player1HighHand,
+				player2HighHand,
 
-                player1PeggingPoints,
-                player2PeggingPoints,
+				player1PeggingPoints,
+				player2PeggingPoints,
 
-                gameId,
-            ],
-        );
-    }
+				gameId,
+			],
+		);
+	}
 
-    private getDealerForHand(
-        firstDealer: 1 | 2,
-        handNumber: number,
-    ): 1 | 2 {
-        const firstDealerHand =
-            handNumber % 2 === 1;
+	private getDealerForHand(firstDealer: 1 | 2, handNumber: number): 1 | 2 {
+		const firstDealerHand = handNumber % 2 === 1;
 
-        if (firstDealerHand) {
-            return firstDealer;
-        }
+		if (firstDealerHand) {
+			return firstDealer;
+		}
 
-        return firstDealer === 1
-            ? 2
-            : 1;
-    }
+		return firstDealer === 1 ? 2 : 1;
+	}
 
-    private async migrate(): Promise<void> {
-        const db = this.requireDb();
-        let version = this.getSchemaVersion();
+	private async migrate(): Promise<void> {
+		const db = this.requireDb();
+		let version = this.getSchemaVersion();
 
-        const originalVersion =
-            version;
+		const originalVersion = version;
 
-        if (version > CURRENT_SCHEMA_VERSION) {
-            throw new Error(
-                `Database schema ${version} is newer than this plugin supports (${CURRENT_SCHEMA_VERSION}).`,
-            );
-        }
+		if (version > CURRENT_SCHEMA_VERSION) {
+			throw new Error(
+				`Database schema ${version} is newer than this plugin supports (${CURRENT_SCHEMA_VERSION}).`,
+			);
+		}
 
-        if (version < 1) {
-            db.run('BEGIN;');
+		if (version < 1) {
+			db.run('BEGIN;');
 
-            try {
-                db.run('DROP TABLE IF EXISTS test;');
+			try {
+				db.run('DROP TABLE IF EXISTS test;');
 
-                db.run(`
+				db.run(`
                     CREATE TABLE games (
                         id TEXT PRIMARY KEY NOT NULL,
 
@@ -2377,7 +2054,7 @@ export class CribbageDatabase {
                     );
                 `);
 
-                db.run(`
+				db.run(`
                     CREATE TABLE hands (
                         id TEXT PRIMARY KEY NOT NULL,
                         game_id TEXT NOT NULL,
@@ -2399,41 +2076,41 @@ export class CribbageDatabase {
                     );
                 `);
 
-                db.run(`
+				db.run(`
                     CREATE INDEX idx_games_played
                     ON games (played_date, played_time);
                 `);
 
-                db.run(`
+				db.run(`
                     CREATE INDEX idx_games_player_1
                     ON games (player_1);
                 `);
 
-                db.run(`
+				db.run(`
                     CREATE INDEX idx_games_player_2
                     ON games (player_2);
                 `);
 
-                db.run(`
+				db.run(`
                     CREATE INDEX idx_hands_game
                     ON hands (game_id, hand_number);
                 `);
 
-                db.run('PRAGMA user_version = 1;');
-                db.run('COMMIT;');
+				db.run('PRAGMA user_version = 1;');
+				db.run('COMMIT;');
 
-                version = 1;
-            } catch (error) {
-                db.run('ROLLBACK;');
-                throw error;
-            }
-        }
+				version = 1;
+			} catch (error) {
+				db.run('ROLLBACK;');
+				throw error;
+			}
+		}
 
-        if (version < 2) {
-            db.run('BEGIN;');
+		if (version < 2) {
+			db.run('BEGIN;');
 
-            try {
-                db.run(`
+			try {
+				db.run(`
                     ALTER TABLE games
                     ADD COLUMN player_1_high_hand_manual INTEGER
                         CHECK (
@@ -2442,7 +2119,7 @@ export class CribbageDatabase {
                         );
                 `);
 
-                db.run(`
+				db.run(`
                     ALTER TABLE games
                     ADD COLUMN player_2_high_hand_manual INTEGER
                         CHECK (
@@ -2451,21 +2128,21 @@ export class CribbageDatabase {
                         );
                 `);
 
-                db.run('PRAGMA user_version = 2;');
-                db.run('COMMIT;');
+				db.run('PRAGMA user_version = 2;');
+				db.run('COMMIT;');
 
-                version = 2;
-            } catch (error) {
-                db.run('ROLLBACK;');
-                throw error;
-            }
-        }
+				version = 2;
+			} catch (error) {
+				db.run('ROLLBACK;');
+				throw error;
+			}
+		}
 
-        if (version < 3) {
-            db.run('BEGIN;');
+		if (version < 3) {
+			db.run('BEGIN;');
 
-            try {
-                db.run(`
+			try {
+				db.run(`
                     ALTER TABLE games
                     ADD COLUMN hand_data_incomplete INTEGER
                         NOT NULL DEFAULT 0
@@ -2474,11 +2151,11 @@ export class CribbageDatabase {
                         );
                 `);
 
-                /*
-                * Existing games with no hand rows are historical/
-                * untracked games, so mark them incomplete.
-                */
-                db.run(`
+				/*
+				 * Existing games with no hand rows are historical/
+				 * untracked games, so mark them incomplete.
+				 */
+				db.run(`
                     UPDATE games
                     SET hand_data_incomplete = 1
                     WHERE NOT EXISTS (
@@ -2488,21 +2165,21 @@ export class CribbageDatabase {
                     );
                 `);
 
-                db.run('PRAGMA user_version = 3;');
-                db.run('COMMIT;');
+				db.run('PRAGMA user_version = 3;');
+				db.run('COMMIT;');
 
-                version = 3;
-            } catch (error) {
-                db.run('ROLLBACK;');
-                throw error;
-            }
-        }
+				version = 3;
+			} catch (error) {
+				db.run('ROLLBACK;');
+				throw error;
+			}
+		}
 
-        if (version < 4) {
-            db.run('BEGIN;');
+		if (version < 4) {
+			db.run('BEGIN;');
 
-            try {
-                db.run(`
+			try {
+				db.run(`
                     CREATE TABLE custom_metrics (
                         id TEXT PRIMARY KEY NOT NULL,
 
@@ -2596,7 +2273,7 @@ export class CribbageDatabase {
                     );
                 `);
 
-                db.run(`
+				db.run(`
                     CREATE INDEX
                         idx_custom_metrics_sort
                     ON custom_metrics (
@@ -2606,88 +2283,61 @@ export class CribbageDatabase {
                     );
                 `);
 
-                db.run('PRAGMA user_version = 4;');
-                db.run('COMMIT;');
+				db.run('PRAGMA user_version = 4;');
+				db.run('COMMIT;');
 
-                version = 4;
-            } catch (error) {
-                db.run('ROLLBACK;');
-                throw error;
-            }
-        }
+				version = 4;
+			} catch (error) {
+				db.run('ROLLBACK;');
+				throw error;
+			}
+		}
 
-        if (version !== originalVersion) {
-            await this.save();
-        }
-
-    }
+		if (version !== originalVersion) {
+			await this.save();
+		}
+	}
 
 	private requireDb(): Database {
 		if (!this.db) {
-			throw new Error(
-				'Database has not been loaded.',
-			);
+			throw new Error('Database has not been loaded.');
 		}
 
 		return this.db;
 	}
 
 	private getDatabasePath(): string {
-		const raw =
-			this.plugin.settings.databasePath.trim();
+		const raw = this.plugin.settings.databasePath.trim();
 
 		if (!raw) {
-			throw new Error(
-				'Database path cannot be empty.',
-			);
+			throw new Error('Database path cannot be empty.');
 		}
 
-		const withoutLeadingSlash =
-			raw.replace(/^\/+/, '');
+		const withoutLeadingSlash = raw.replace(/^\/+/, '');
 
-		if (
-			withoutLeadingSlash
-				.split('/')
-				.some((part) => part === '..')
-		) {
-			throw new Error(
-				'Database path must remain inside the vault.',
-			);
+		if (withoutLeadingSlash.split('/').some((part) => part === '..')) {
+			throw new Error('Database path must remain inside the vault.');
 		}
 
 		return normalizePath(withoutLeadingSlash);
 	}
 
-	private async ensureParentFolders(
-		filePath: string,
-	): Promise<void> {
-		const parts =
-			filePath.split('/').slice(0, -1);
+	private async ensureParentFolders(filePath: string): Promise<void> {
+		const parts = filePath.split('/').slice(0, -1);
 
 		let current = '';
 
 		for (const part of parts) {
-			current = current
-				? `${current}/${part}`
-				: part;
+			current = current ? `${current}/${part}` : part;
 
-			if (
-				!(await this.plugin.app.vault.adapter.exists(
-					current,
-				))
-			) {
-				await this.plugin.app.vault.createFolder(
-					current,
-				);
+			if (!(await this.plugin.app.vault.adapter.exists(current))) {
+				await this.plugin.app.vault.createFolder(current);
 			}
 		}
 	}
 
 	private createId(): string {
-		if (
-			typeof window.crypto?.randomUUID ===
-			'function'
-		) {
+		if (typeof window.crypto?.randomUUID === 'function') {
 			return window.crypto.randomUUID();
 		}
 

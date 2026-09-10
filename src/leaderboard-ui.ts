@@ -65,6 +65,14 @@ interface RecordOccurrence {
 	playedTime: string;
 }
 
+interface SkunkWinOccurrence {
+	player: string;
+	opponent: string;
+
+	playedDate: string;
+	playedTime: string;
+}
+
 interface WinningStreakOccurrence {
 	length: number;
 	player: string;
@@ -98,6 +106,62 @@ interface GroupedRecordRow {
 
 	label: string;
 	subtext: string;
+}
+
+interface RecordContributor {
+	name: string;
+	count: number;
+
+	latestDate: string;
+	latestTime: string;
+}
+
+function formatRecordContributors(
+	contributors: RecordContributor[],
+	showCounts: boolean,
+): string {
+	const sorted =
+		[...contributors].sort(
+			(a, b) =>
+				b.latestDate.localeCompare(
+					a.latestDate,
+				) ||
+				b.latestTime.localeCompare(
+					a.latestTime,
+				) ||
+				a.name.localeCompare(
+					b.name,
+				),
+		);
+
+	/*
+	 * Up to three contributors:
+	 * show everyone.
+	 *
+	 * Four or more:
+	 * show the two most recent,
+	 * then "X others".
+	 */
+	const visible =
+		sorted.length <= 3
+			? sorted
+			: sorted.slice(0, 2);
+
+	const pieces =
+		visible.map(
+			(contributor) =>
+				showCounts
+					? `${contributor.name} ${contributor.count}x`
+					: contributor.name,
+		);
+
+	if (sorted.length > 3) {
+		pieces.push(
+			`${sorted.length - 2} others`,
+		);
+	}
+
+	return pieces.join(' • ');
 }
 
 export function renderLeaderboardPage(
@@ -147,7 +211,6 @@ export function renderLeaderboardPage(
 
 	renderRecords(
 		container,
-		summaries,
 		games,
 		hands,
 	);
@@ -1161,7 +1224,6 @@ function renderSituational(
 
 function renderRecords(
 	container: HTMLElement,
-	players: PlayerAggregate[],
 	games: GameStatisticsRecord[],
 	hands: HandStatisticsRecord[],
 ): void {
@@ -1176,56 +1238,22 @@ function renderRecords(
 			section,
 		);
 
-	renderLeaderboardCard(
+	renderGroupedSkunkCard(
 		grid,
 		'Skunk Wins',
-		players
-			.filter(
-				(player) =>
-					player.skunkWins > 0,
-			)
-			.map(
-				(player) => ({
-					label:
-						player.name,
-
-					value:
-						player.skunkWins,
-
-					displayValue:
-						String(
-							player.skunkWins,
-						),
-				}),
-			),
+		buildSkunkWinOccurrences(
+			games,
+			false,
+		),
 	);
 
-	renderLeaderboardCard(
+	renderGroupedSkunkCard(
 		grid,
 		'Double-Skunk Wins',
-		players
-			.filter(
-				(player) =>
-					player
-						.doubleSkunkWins >
-					0,
-			)
-			.map(
-				(player) => ({
-					label:
-						player.name,
-
-					value:
-						player
-							.doubleSkunkWins,
-
-					displayValue:
-						String(
-							player
-								.doubleSkunkWins,
-						),
-				}),
-			),
+		buildSkunkWinOccurrences(
+			games,
+			true,
+		),
 	);
 
 	renderWinningStreakCard(
@@ -1540,6 +1568,84 @@ function rankItems(
 	return result;
 }
 
+function buildSkunkWinOccurrences(
+	games: GameStatisticsRecord[],
+	doubleSkunk: boolean,
+): SkunkWinOccurrence[] {
+	const occurrences:
+		SkunkWinOccurrence[] = [];
+
+	for (const game of games) {
+		if (
+			typeof game.player1Score !==
+				'number' ||
+			typeof game.player2Score !==
+				'number' ||
+			game.player1Score ===
+				game.player2Score
+		) {
+			continue;
+		}
+
+		const player1Won =
+			game.player1Score >
+			game.player2Score;
+
+		const winner =
+			player1Won
+				? cleanPlayerName(
+						game.player1,
+					)
+				: cleanPlayerName(
+						game.player2,
+					);
+
+		const loser =
+			player1Won
+				? cleanPlayerName(
+						game.player2,
+					)
+				: cleanPlayerName(
+						game.player1,
+					);
+
+		const losingScore =
+			player1Won
+				? game.player2Score
+				: game.player1Score;
+
+		if (
+			!winner ||
+			!loser
+		) {
+			continue;
+		}
+
+		const qualifies =
+			doubleSkunk
+				? losingScore <= 60
+				: losingScore > 60 &&
+					losingScore <= 90;
+
+		if (!qualifies) {
+			continue;
+		}
+
+		occurrences.push({
+			player: winner,
+			opponent: loser,
+
+			playedDate:
+				game.playedDate,
+
+			playedTime:
+				game.playedTime,
+		});
+	}
+
+	return occurrences;
+}
+
 function buildWinningStreakOccurrences(
 	games: GameStatisticsRecord[],
 ): WinningStreakOccurrence[] {
@@ -1775,36 +1881,65 @@ function groupWinningStreakOccurrences(
 			continue;
 		}
 
-		const contributorCounts =
-			new Map<string, number>();
+		const contributorStreaks =
+			new Map<
+				string,
+				WinningStreakOccurrence[]
+			>();
 
 		for (
 			const streak of streaks
 		) {
-			contributorCounts.set(
-				streak.player,
-				(
-					contributorCounts.get(
-						streak.player,
-					) ?? 0
-				) + 1,
-			);
+			const existing =
+				contributorStreaks.get(
+					streak.player,
+				);
+
+			if (existing) {
+				existing.push(streak);
+			} else {
+				contributorStreaks.set(
+					streak.player,
+					[streak],
+				);
+			}
 		}
 
-		const contributors =
-			Array.from(
-				contributorCounts.entries(),
-			).sort(
-				(a, b) =>
-					b[1] - a[1] ||
-					a[0].localeCompare(
-						b[0],
-					),
-			);
+		const contributors:
+			RecordContributor[] =
+				Array.from(
+					contributorStreaks
+						.entries(),
+				).map(
+					([
+						player,
+						playerStreaks,
+					]) => {
+						const latest =
+							[...playerStreaks]
+								.sort(
+									compareStreaksNewestFirst,
+								)[0]!;
+
+						return {
+							name:
+								player,
+
+							count:
+								playerStreaks.length,
+
+							latestDate:
+								latest.endDate,
+
+							latestTime:
+								latest.endTime,
+						};
+					},
+				);
 
 		const label =
 			contributors.length === 1
-				? contributors[0]![0]
+				? contributors[0]!.name
 				: 'Multiple';
 
 		let subtext: string;
@@ -1837,44 +1972,11 @@ function groupWinningStreakOccurrences(
 					latest,
 				)}`;
 		} else {
-			const pieces:
-				string[] = [];
-
-			for (
-				const [
-					player,
-					count,
-				] of contributors.slice(
-					0,
-					2,
-				)
-			) {
-				pieces.push(
-					`${player} ${count}x`,
-				);
-			}
-
-			const others =
-				contributors
-					.slice(2)
-					.reduce(
-						(
-							total,
-							[, count],
-						) =>
-							total +
-							count,
-						0,
-					);
-
-			if (others > 0) {
-				pieces.push(
-					`Others ${others}x`,
-				);
-			}
-
 			subtext =
-				pieces.join(' • ');
+				formatRecordContributors(
+					contributors,
+					true,
+				);
 		}
 
 		rows.push({
@@ -2006,6 +2108,251 @@ function renderWinningStreakCard(
 				'cribbage-leaderboard-note cribbage-leaderboard-active-note',
 		});
 	}
+}
+
+function renderGroupedSkunkCard(
+	container: HTMLElement,
+	title: string,
+	occurrences:
+		SkunkWinOccurrence[],
+): void {
+	const card =
+		container.createDiv(
+			'cribbage-leaderboard-card',
+		);
+
+	card.createEl('h4', {
+		text: title,
+	});
+
+	const byPlayer =
+		new Map<
+			string,
+			SkunkWinOccurrence[]
+		>();
+
+	for (
+		const occurrence
+		of occurrences
+	) {
+		const existing =
+			byPlayer.get(
+				occurrence.player,
+			);
+
+		if (existing) {
+			existing.push(
+				occurrence,
+			);
+		} else {
+			byPlayer.set(
+				occurrence.player,
+				[occurrence],
+			);
+		}
+	}
+
+	const byCount =
+		new Map<
+			number,
+			[
+				string,
+				SkunkWinOccurrence[],
+			][]
+		>();
+
+	for (
+		const [
+			player,
+			playerOccurrences,
+		] of byPlayer
+	) {
+		const count =
+			playerOccurrences.length;
+
+		const existing =
+			byCount.get(count);
+
+		const entry:
+			[
+				string,
+				SkunkWinOccurrence[],
+			] = [
+				player,
+				playerOccurrences,
+			];
+
+		if (existing) {
+			existing.push(entry);
+		} else {
+			byCount.set(
+				count,
+				[entry],
+			);
+		}
+	}
+
+	const counts =
+		Array.from(
+			byCount.keys(),
+		).sort(
+			(a, b) =>
+				b - a,
+		);
+
+	if (counts.length === 0) {
+		renderEmpty(
+			card,
+			'No qualifying records yet.',
+		);
+
+		return;
+	}
+
+	const rowsContainer =
+		card.createDiv(
+			'cribbage-leaderboard-rows',
+		);
+
+	let rank = 1;
+	let rowsShown = 0;
+
+	for (const count of counts) {
+		if (rowsShown >= 5) {
+			break;
+		}
+
+		const players =
+			byCount.get(count) ?? [];
+
+		if (players.length === 0) {
+			continue;
+		}
+
+		const row =
+			rowsContainer.createDiv(
+				'cribbage-leaderboard-row',
+			);
+
+		const main =
+			row.createDiv(
+				'cribbage-leaderboard-row-main',
+			);
+
+		main.createSpan({
+			text: `${rank}.`,
+			cls:
+				'cribbage-leaderboard-rank',
+		});
+
+		main.createSpan({
+			text:
+				players.length === 1
+					? players[0]![0]
+					: 'Multiple',
+
+			cls:
+				'cribbage-leaderboard-name',
+		});
+
+		main.createEl('strong', {
+			text:
+				String(count),
+
+			cls:
+				'cribbage-leaderboard-value',
+		});
+
+		let subtext: string;
+
+		if (players.length === 1) {
+			const [
+				,
+				playerOccurrences,
+			] = players[0]!;
+
+			const latest =
+				[...playerOccurrences]
+					.sort(
+						compareSkunksNewestFirst,
+					)[0]!;
+
+			if (
+				playerOccurrences.length ===
+				1
+			) {
+				subtext =
+					`vs ${latest.opponent} on ${formatDate(latest.playedDate)}`;
+			} else {
+				subtext =
+					`Last: vs ${latest.opponent} on ${formatDate(latest.playedDate)}`;
+			}
+		} else {
+			const contributors:
+				RecordContributor[] =
+				players.map(
+					([
+						player,
+						playerOccurrences,
+					]) => {
+						const latest =
+							[...playerOccurrences]
+								.sort(
+									compareSkunksNewestFirst,
+								)[0]!;
+
+						return {
+							name:
+								player,
+
+							count:
+								playerOccurrences.length,
+
+							latestDate:
+								latest.playedDate,
+
+							latestTime:
+								latest.playedTime,
+						};
+					},
+				);
+
+			subtext =
+				formatRecordContributors(
+					contributors,
+					false,
+				);
+		}
+
+		row.createDiv({
+			text: subtext,
+			cls:
+				'cribbage-leaderboard-subtext',
+		});
+
+		/*
+		 * Players tied at this count occupy
+		 * multiple theoretical leaderboard
+		 * positions.
+		 */
+		rank += players.length;
+
+		rowsShown++;
+	}
+}
+
+function compareSkunksNewestFirst(
+	a: SkunkWinOccurrence,
+	b: SkunkWinOccurrence,
+): number {
+	return (
+		b.playedDate.localeCompare(
+			a.playedDate,
+		) ||
+		b.playedTime.localeCompare(
+			a.playedTime,
+		)
+	);
 }
 
 function buildHighestHandOccurrences(
@@ -2541,41 +2888,68 @@ function groupRecordOccurrences(
 			continue;
 		}
 
-		const contributorCounts =
+		const contributorOccurrences =
 			new Map<
 				string,
-				number
+				RecordOccurrence[]
 			>();
 
 		for (
 			const occurrence
 			of scoreOccurrences
 		) {
-			contributorCounts.set(
-				occurrence.player,
-				(
-					contributorCounts.get(
-						occurrence.player,
-					) ?? 0
-				) + 1,
-			);
+			const existing =
+				contributorOccurrences.get(
+					occurrence.player,
+				);
+
+			if (existing) {
+				existing.push(
+					occurrence,
+				);
+			} else {
+				contributorOccurrences.set(
+					occurrence.player,
+					[occurrence],
+				);
+			}
 		}
 
-		const contributors =
-			Array.from(
-				contributorCounts
-					.entries(),
-			).sort(
-				(a, b) =>
-					b[1] - a[1] ||
-					a[0].localeCompare(
-						b[0],
-					),
-			);
+		const contributors:
+			RecordContributor[] =
+				Array.from(
+					contributorOccurrences
+						.entries(),
+				).map(
+					([
+						player,
+						playerOccurrences,
+					]) => {
+						const latest =
+							[...playerOccurrences]
+								.sort(
+									compareOccurrencesNewestFirst,
+								)[0]!;
+
+						return {
+							name:
+								player,
+
+							count:
+								playerOccurrences.length,
+
+							latestDate:
+								latest.playedDate,
+
+							latestTime:
+								latest.playedTime,
+						};
+					},
+				);
 
 		const label =
 			contributors.length === 1
-				? contributors[0]![0]
+				? contributors[0]!.name
 				: 'Multiple';
 
 		let subtext: string;
@@ -2601,44 +2975,11 @@ function groupRecordOccurrences(
 			subtext =
 				`Last: vs ${latest.opponent} on ${formatDate(latest.playedDate)}`;
 		} else {
-			const pieces:
-				string[] = [];
-
-			for (
-				const [
-					player,
-					count,
-				] of contributors.slice(
-					0,
-					2,
-				)
-			) {
-				pieces.push(
-					`${player} ${count}x`,
-				);
-			}
-
-			const others =
-				contributors
-					.slice(2)
-					.reduce(
-						(
-							total,
-							[, count],
-						) =>
-							total +
-							count,
-						0,
-					);
-
-			if (others > 0) {
-				pieces.push(
-					`Others ${others}x`,
-				);
-			}
-
 			subtext =
-				pieces.join(' • ');
+				formatRecordContributors(
+					contributors,
+					true,
+				);
 		}
 
 		rows.push({

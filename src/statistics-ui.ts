@@ -1,6 +1,9 @@
 import type CribbageTrackerPlugin from './main';
 
-import type { GameStatisticsRecord } from './database';
+import type {
+	GameStatisticsRecord,
+	HandStatisticsRecord,
+} from './database';
 
 import { renderCustomMetricStatistics } from './custom-metric-statistics';
 
@@ -72,6 +75,46 @@ interface StatisticContext {
 	globalDoubleSkunkGame?: string;
 }
 
+interface ScopedRecordStat {
+	value: number | null;
+	count: number;
+	subtext?: string;
+}
+
+interface GameLengthOccurrence {
+	value: number;
+
+	player1: string;
+	player2: string;
+
+	playedDate: string;
+	playedTime: string;
+}
+
+interface ScopedExtraStats {
+	averageVictoryMargin: number | null;
+
+	largestFinalCountDeficit:
+		ScopedRecordStat;
+
+	mostFinalCountPointsWin:
+		ScopedRecordStat;
+
+	mostFinalCountPointsLoss:
+		ScopedRecordStat;
+
+	largestSingleRoundCount:
+		ScopedRecordStat;
+
+	averageGameLength: number | null;
+
+	quickestGame:
+		ScopedRecordStat;
+
+	longestGame:
+		ScopedRecordStat;
+}
+
 interface PlayerStats {
 	games: number;
 	wins: number;
@@ -119,7 +162,11 @@ export function renderStatisticsPage(
 	container: HTMLElement,
 	plugin: CribbageTrackerPlugin,
 ): void {
-	const games = plugin.database.listGamesForStatistics();
+	const games =
+		plugin.database.listGamesForStatistics();
+
+	const hands =
+		plugin.database.listHandsForStatistics();
 
 	const players = plugin.database.getPlayerNames();
 
@@ -171,7 +218,7 @@ export function renderStatisticsPage(
 		);
 
 		if (scope === 'global') {
-			renderGlobalStats(results, games, plugin);
+			renderGlobalStats(results, games, hands, plugin);
 
 			return;
 		}
@@ -187,7 +234,7 @@ export function renderStatisticsPage(
 		}
 
 		if (scope === 'player') {
-			renderPlayerStats(results, games, player, plugin);
+			renderPlayerStats(results, games, hands, player, plugin);
 
 			return;
 		}
@@ -210,7 +257,7 @@ export function renderStatisticsPage(
 			return;
 		}
 
-		renderMatchupStats(results, games, player, opponent, plugin);
+		renderMatchupStats(results, games, hands, player, opponent, plugin);
 	};
 
 	for (const select of [scopeField, player1Field, player2Field]) {
@@ -223,6 +270,7 @@ export function renderStatisticsPage(
 function renderGlobalStats(
 	container: HTMLElement,
 	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
 	plugin: CribbageTrackerPlugin,
 ): void {
 	const handPar =
@@ -232,10 +280,6 @@ function renderGlobalStats(
 		(plugin.settings.dealerPeggingPar + plugin.settings.ponePeggingPar) / 2;
 
 	const completed = games.filter(hasCompletedScore);
-
-	const margins = completed.map((game) =>
-		Math.abs((game.player1Score ?? 0) - (game.player2Score ?? 0)),
-	);
 
 	const completeHands = games.filter(
 		(game) => !game.handDataIncomplete && game.roundCount > 0,
@@ -290,6 +334,14 @@ function renderGlobalStats(
 
 	const context = calculateStatisticContext(games, null, null);
 
+	const extraStats =
+		calculateScopedExtraStats(
+			games,
+			hands,
+			null,
+			null,
+		);
+
 	const longestWinStreak =
 		calculateGlobalStreakSummary(
 			games,
@@ -313,7 +365,7 @@ function renderGlobalStats(
 		},
 		{
 			label: 'Average margin of victory',
-			value: formatNumber(average(margins)),
+			value: formatNumber(extraStats.averageVictoryMargin),
 		},
 		{
 			label: 'First dealer record',
@@ -392,6 +444,106 @@ function renderGlobalStats(
 			subtext: context.lowestHighHandInWin,
 		},
 		{
+			label:
+				'Largest final-count deficit overcome',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.largestFinalCountDeficit,
+				),
+
+			subtext:
+				extraStats
+					.largestFinalCountDeficit
+					.subtext,
+		},
+		{
+			label:
+				'Most final-count points in a win',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.mostFinalCountPointsWin,
+				),
+
+			subtext:
+				extraStats
+					.mostFinalCountPointsWin
+					.subtext,
+		},
+		{
+			label:
+				'Most final-count points in a loss',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.mostFinalCountPointsLoss,
+				),
+
+			subtext:
+				extraStats
+					.mostFinalCountPointsLoss
+					.subtext,
+		},
+		{
+			label:
+				'Largest single-round count',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.largestSingleRoundCount,
+				),
+
+			subtext:
+				extraStats
+					.largestSingleRoundCount
+					.subtext,
+		},
+		{
+			label:
+				'Average game length (hands)',
+
+			value:
+				formatNumber(
+					extraStats
+						.averageGameLength,
+				),
+		},
+		{
+			label:
+				'Quickest game (hands)',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.quickestGame,
+				),
+
+			subtext:
+				extraStats
+					.quickestGame
+					.subtext,
+		},
+		{
+			label:
+				'Longest game (hands)',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.longestGame,
+				),
+
+			subtext:
+				extraStats
+					.longestGame
+					.subtext,
+		},
+		{
 			label: 'Points / hand',
 			value: formatNumber(globalPointsPerHand),
 			valueClass: getParClass(globalPointsPerHand, handPar),
@@ -442,6 +594,7 @@ function renderGlobalStats(
 function renderPlayerStats(
 	container: HTMLElement,
 	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
 	player: string,
 	plugin: CribbageTrackerPlugin,
 ): void {
@@ -453,7 +606,23 @@ function renderPlayerStats(
 
 	const context = calculateStatisticContext(games, player, null);
 
-	renderMetricGrid(container, playerMetrics(stats, plugin, context));
+	const extraStats =
+		calculateScopedExtraStats(
+			games,
+			hands,
+			player,
+			null,
+		);
+
+	renderMetricGrid(
+		container,
+		playerMetrics(
+			stats,
+			plugin,
+			context,
+			extraStats,
+		),
+	);
 
 	renderCustomMetricStatistics(container, plugin, games, {
 		type: 'player',
@@ -476,6 +645,7 @@ function renderPlayerStats(
 function renderMatchupStats(
 	container: HTMLElement,
 	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
 	player1: string,
 	player2: string,
 	plugin: CribbageTrackerPlugin,
@@ -509,6 +679,22 @@ function renderMatchupStats(
 	const context1 = calculateStatisticContext(games, player1, player2);
 
 	const context2 = calculateStatisticContext(games, player2, player1);
+
+	const extra1 =
+		calculateScopedExtraStats(
+			games,
+			hands,
+			player1,
+			player2,
+		);
+
+	const extra2 =
+		calculateScopedExtraStats(
+			games,
+			hands,
+			player2,
+			player1,
+		);
 
 	const table = container.createEl('table', {
 		cls: 'cribbage-table cribbage-stat-table',
@@ -544,6 +730,19 @@ function renderMatchupStats(
 			'Avg score differential',
 			formatNumber(stats1.scoreDifferential),
 			formatNumber(stats2.scoreDifferential),
+		],
+		[
+			'Average margin of victory',
+
+			formatNumber(
+				extra1
+					.averageVictoryMargin,
+			),
+
+			formatNumber(
+				extra2
+					.averageVictoryMargin,
+			),
 		],
 		[
 			'When dealing first',
@@ -663,6 +862,93 @@ function renderMatchupStats(
 			),
 		],
 		[
+			'Largest final-count deficit overcome',
+
+			formatScopedRecord(
+				extra1
+					.largestFinalCountDeficit,
+			),
+
+			formatScopedRecord(
+				extra2
+					.largestFinalCountDeficit,
+			),
+		],
+		[
+			'Most final-count points in a win',
+
+			formatScopedRecord(
+				extra1
+					.mostFinalCountPointsWin,
+			),
+
+			formatScopedRecord(
+				extra2
+					.mostFinalCountPointsWin,
+			),
+		],
+		[
+			'Most final-count points in a loss',
+
+			formatScopedRecord(
+				extra1
+					.mostFinalCountPointsLoss,
+			),
+
+			formatScopedRecord(
+				extra2
+					.mostFinalCountPointsLoss,
+			),
+		],
+		[
+			'Largest single-round count',
+
+			formatScopedRecord(
+				extra1
+					.largestSingleRoundCount,
+			),
+
+			formatScopedRecord(
+				extra2
+					.largestSingleRoundCount,
+			),
+		],
+		[
+			'Average game length (hands)',
+
+			formatNumber(
+				extra1
+					.averageGameLength,
+			),
+
+			formatNumber(
+				extra2
+					.averageGameLength,
+			),
+		],
+		[
+			'Quickest game (hands)',
+
+			formatScopedRecord(
+				extra1.quickestGame,
+			),
+
+			formatScopedRecord(
+				extra2.quickestGame,
+			),
+		],
+		[
+			'Longest game (hands)',
+
+			formatScopedRecord(
+				extra1.longestGame,
+			),
+
+			formatScopedRecord(
+				extra2.longestGame,
+			),
+		],
+		[
 			`Points / hand (par ${handPar.toFixed(2)})`,
 			formatNumber(stats1.pointsPerHand),
 			formatNumber(stats2.pointsPerHand),
@@ -705,6 +991,78 @@ function renderMatchupStats(
 		[
 			'Lowest high-hand in win',
 			[context1.lowestHighHandInWin, context2.lowestHighHandInWin],
+		],
+		[
+			'Largest final-count deficit overcome',
+			[
+				extra1
+					.largestFinalCountDeficit
+					.subtext,
+
+				extra2
+					.largestFinalCountDeficit
+					.subtext,
+			],
+		],
+		[
+			'Most final-count points in a win',
+			[
+				extra1
+					.mostFinalCountPointsWin
+					.subtext,
+
+				extra2
+					.mostFinalCountPointsWin
+					.subtext,
+			],
+		],
+		[
+			'Most final-count points in a loss',
+			[
+				extra1
+					.mostFinalCountPointsLoss
+					.subtext,
+
+				extra2
+					.mostFinalCountPointsLoss
+					.subtext,
+			],
+		],
+		[
+			'Largest single-round count',
+			[
+				extra1
+					.largestSingleRoundCount
+					.subtext,
+
+				extra2
+					.largestSingleRoundCount
+					.subtext,
+			],
+		],
+		[
+			'Quickest game (hands)',
+			[
+				extra1
+					.quickestGame
+					.subtext,
+
+				extra2
+					.quickestGame
+					.subtext,
+			],
+		],
+		[
+			'Longest game (hands)',
+			[
+				extra1
+					.longestGame
+					.subtext,
+
+				extra2
+					.longestGame
+					.subtext,
+			],
 		],
 		[
 			'Skunk wins',
@@ -819,6 +1177,741 @@ function renderMatchupStats(
 			}
 		}
 	}
+}
+
+function calculateScopedExtraStats(
+	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
+	player: string | null,
+	opponent: string | null,
+): ScopedExtraStats {
+	const relevantGames =
+		games.filter((game) => {
+			if (
+				player !== null &&
+				!gameContainsPlayer(
+					game,
+					player,
+				)
+			) {
+				return false;
+			}
+
+			if (
+				player !== null &&
+				opponent !== null &&
+				!gameContainsPlayers(
+					game,
+					player,
+					opponent,
+				)
+			) {
+				return false;
+			}
+
+			return true;
+		});
+
+	const relevantGameIds =
+		new Set(
+			relevantGames.map(
+				(game) =>
+					game.id,
+			),
+		);
+
+	const handsByGame =
+		groupHandsByGame(
+			hands.filter(
+				(hand) =>
+					relevantGameIds.has(
+						hand.gameId,
+					),
+			),
+		);
+
+	const victoryMargins:
+		number[] = [];
+
+	const deficitOccurrences:
+		ContextRecordOccurrence[] = [];
+
+	const finalWinOccurrences:
+		ContextRecordOccurrence[] = [];
+
+	const finalLossOccurrences:
+		ContextRecordOccurrence[] = [];
+
+	const singleRoundOccurrences:
+		ContextRecordOccurrence[] = [];
+
+	const gameLengthOccurrences:
+		GameLengthOccurrence[] = [];
+
+	for (const game of relevantGames) {
+		const player1Score =
+			game.player1Score;
+
+		const player2Score =
+			game.player2Score;
+
+		/*
+		 * Game-length statistics require a
+		 * complete hand log.
+		 */
+		if (
+			!game.handDataIncomplete &&
+			typeof player1Score ===
+				'number' &&
+			typeof player2Score ===
+				'number' &&
+			game.roundCount > 0
+		) {
+			gameLengthOccurrences.push({
+				value:
+					game.roundCount,
+
+				player1:
+					game.player1,
+
+				player2:
+					game.player2,
+
+				playedDate:
+					game.playedDate,
+
+				playedTime:
+					game.playedTime,
+			});
+		}
+
+		if (
+			typeof player1Score !==
+				'number' ||
+			typeof player2Score !==
+				'number' ||
+			player1Score ===
+				player2Score
+		) {
+			continue;
+		}
+
+		/*
+		 * Average margin of victory.
+		 */
+		if (player === null) {
+			victoryMargins.push(
+				Math.abs(
+					player1Score -
+						player2Score,
+				),
+			);
+		} else {
+			const side =
+				getPlayerSide(
+					game,
+					player,
+				);
+
+			if (side !== null) {
+				const score =
+					side === 1
+						? player1Score
+						: player2Score;
+
+				const opponentScore =
+					side === 1
+						? player2Score
+						: player1Score;
+
+				if (
+					score >
+					opponentScore
+				) {
+					victoryMargins.push(
+						score -
+							opponentScore,
+					);
+				}
+			}
+		}
+
+		const gameHands =
+			handsByGame.get(
+				game.id,
+			) ?? [];
+
+		const finalHand =
+			gameHands.find(
+				(hand) =>
+					hand.isLastHand,
+			);
+
+		if (!finalHand) {
+			continue;
+		}
+
+		const winningSide:
+			1 | 2 =
+				player1Score >
+				player2Score
+					? 1
+					: 2;
+
+		const losingSide:
+			1 | 2 =
+				winningSide === 1
+					? 2
+					: 1;
+
+		const winnerFinalPoints =
+			getFinalCountPoints(
+				finalHand,
+				winningSide,
+			);
+
+		const loserFinalPoints =
+			getFinalCountPoints(
+				finalHand,
+				losingSide,
+			);
+
+		if (player === null) {
+			if (
+				winnerFinalPoints !==
+					null &&
+				winnerFinalPoints > 0
+			) {
+				addContextOccurrence(
+					finalWinOccurrences,
+					winnerFinalPoints,
+					game,
+					winningSide,
+				);
+			}
+
+			if (
+				loserFinalPoints !==
+					null &&
+				loserFinalPoints > 0
+			) {
+				addContextOccurrence(
+					finalLossOccurrences,
+					loserFinalPoints,
+					game,
+					losingSide,
+				);
+			}
+		} else {
+			const side =
+				getPlayerSide(
+					game,
+					player,
+				);
+
+			if (side !== null) {
+				const finalPoints =
+					getFinalCountPoints(
+						finalHand,
+						side,
+					);
+
+				if (
+					finalPoints !== null &&
+					finalPoints > 0
+				) {
+					if (
+						side ===
+						winningSide
+					) {
+						addContextOccurrence(
+							finalWinOccurrences,
+							finalPoints,
+							game,
+							side,
+						);
+					} else {
+						addContextOccurrence(
+							finalLossOccurrences,
+							finalPoints,
+							game,
+							side,
+						);
+					}
+				}
+			}
+		}
+
+		/*
+		 * We can reconstruct the position after
+		 * final-round pegging by subtracting the
+		 * final count from the final score.
+		 */
+		if (
+			winnerFinalPoints !== null &&
+			loserFinalPoints !== null
+		) {
+			const winnerScore =
+				winningSide === 1
+					? player1Score
+					: player2Score;
+
+			const loserScore =
+				losingSide === 1
+					? player1Score
+					: player2Score;
+
+			const winnerBeforeCount =
+				winnerScore -
+				winnerFinalPoints;
+
+			const loserBeforeCount =
+				loserScore -
+				loserFinalPoints;
+
+			const deficit =
+				loserBeforeCount -
+				winnerBeforeCount;
+
+			if (
+				deficit > 0 &&
+				(
+					player === null ||
+					getPlayerSide(
+						game,
+						player,
+					) ===
+						winningSide
+				)
+			) {
+				addContextOccurrence(
+					deficitOccurrences,
+					deficit,
+					game,
+					winningSide,
+				);
+			}
+		}
+	}
+
+	/*
+	 * Largest single-round count.
+	 *
+	 * A player's round count is their hand
+	 * plus their crib when they are dealer.
+	 */
+	for (const hand of hands) {
+		if (
+			!relevantGameIds.has(
+				hand.gameId,
+			)
+		) {
+			continue;
+		}
+
+		let sides:
+			Array<1 | 2>;
+
+		if (player === null) {
+			sides = [1, 2];
+		} else if (
+			hand.player1 === player
+		) {
+			sides = [1];
+		} else if (
+			hand.player2 === player
+		) {
+			sides = [2];
+		} else {
+			continue;
+		}
+
+		for (const side of sides) {
+			const value =
+				getSingleRoundCount(
+					hand,
+					side,
+				);
+
+			if (value === null) {
+				continue;
+			}
+
+			singleRoundOccurrences.push({
+				value,
+
+				player:
+					side === 1
+						? hand.player1
+						: hand.player2,
+
+				opponent:
+					side === 1
+						? hand.player2
+						: hand.player1,
+
+				playedDate:
+					hand.playedDate,
+
+				playedTime:
+					hand.playedTime,
+			});
+		}
+	}
+
+	const includePlayer =
+		player === null;
+
+	return {
+		averageVictoryMargin:
+			average(
+				victoryMargins,
+			),
+
+		largestFinalCountDeficit:
+			summarizeContextRecord(
+				deficitOccurrences,
+				'maximum',
+				includePlayer,
+			),
+
+		mostFinalCountPointsWin:
+			summarizeContextRecord(
+				finalWinOccurrences,
+				'maximum',
+				includePlayer,
+			),
+
+		mostFinalCountPointsLoss:
+			summarizeContextRecord(
+				finalLossOccurrences,
+				'maximum',
+				includePlayer,
+			),
+
+		largestSingleRoundCount:
+			summarizeContextRecord(
+				singleRoundOccurrences,
+				'maximum',
+				includePlayer,
+			),
+
+		averageGameLength:
+			average(
+				gameLengthOccurrences.map(
+					(occurrence) =>
+						occurrence.value,
+				),
+			),
+
+		quickestGame:
+			summarizeGameLength(
+				gameLengthOccurrences,
+				'minimum',
+				player,
+			),
+
+		longestGame:
+			summarizeGameLength(
+				gameLengthOccurrences,
+				'maximum',
+				player,
+			),
+	};
+}
+
+function getFinalCountPoints(
+	hand: HandStatisticsRecord,
+	side: 1 | 2,
+): number | null {
+	const handPoints =
+		side === 1
+			? hand.player1HandPoints
+			: hand.player2HandPoints;
+
+	if (
+		typeof handPoints !==
+		'number'
+	) {
+		return null;
+	}
+
+	const dealer =
+		getHandDealer(
+			hand.firstDealer,
+			hand.handNumber,
+		);
+
+	if (dealer !== side) {
+		return handPoints;
+	}
+
+	if (
+		typeof hand.cribPoints !==
+		'number'
+	) {
+		return null;
+	}
+
+	return (
+		handPoints +
+		hand.cribPoints
+	);
+}
+
+
+function getSingleRoundCount(
+	hand: HandStatisticsRecord,
+	side: 1 | 2,
+): number | null {
+	const handPoints =
+		side === 1
+			? hand.player1HandPoints
+			: hand.player2HandPoints;
+
+	if (
+		typeof handPoints !==
+		'number'
+	) {
+		return null;
+	}
+
+	const dealer =
+		getHandDealer(
+			hand.firstDealer,
+			hand.handNumber,
+		);
+
+	if (dealer !== side) {
+		return handPoints;
+	}
+
+	if (
+		typeof hand.cribPoints !==
+		'number'
+	) {
+		return null;
+	}
+
+	return (
+		handPoints +
+		hand.cribPoints
+	);
+}
+
+
+function addContextOccurrence(
+	target:
+		ContextRecordOccurrence[],
+	value: number,
+	game: GameStatisticsRecord,
+	side: 1 | 2,
+): void {
+	target.push({
+		value,
+
+		player:
+			side === 1
+				? game.player1
+				: game.player2,
+
+		opponent:
+			side === 1
+				? game.player2
+				: game.player1,
+
+		playedDate:
+			game.playedDate,
+
+		playedTime:
+			game.playedTime,
+	});
+}
+
+
+function summarizeContextRecord(
+	occurrences:
+		ContextRecordOccurrence[],
+	direction:
+		| 'minimum'
+		| 'maximum',
+	includePlayer: boolean,
+): ScopedRecordStat {
+	const selected =
+		selectExtremeRecordOccurrences(
+			occurrences,
+			direction,
+		);
+
+	return {
+		value:
+			selected[0]?.value ??
+			null,
+
+		count:
+			selected.length,
+
+		subtext:
+			formatRecordContext(
+				selected,
+				includePlayer,
+			),
+	};
+}
+
+
+function summarizeGameLength(
+	occurrences:
+		GameLengthOccurrence[],
+	direction:
+		| 'minimum'
+		| 'maximum',
+	player: string | null,
+): ScopedRecordStat {
+	if (
+		occurrences.length === 0
+	) {
+		return {
+			value: null,
+			count: 0,
+		};
+	}
+
+	const values =
+		occurrences.map(
+			(occurrence) =>
+				occurrence.value,
+		);
+
+	const extreme =
+		direction === 'maximum'
+			? Math.max(...values)
+			: Math.min(...values);
+
+	const matches =
+		occurrences.filter(
+			(occurrence) =>
+				occurrence.value ===
+				extreme,
+		);
+
+	return {
+		value:
+			extreme,
+
+		count:
+			matches.length,
+
+		subtext:
+			formatGameLengthContext(
+				matches,
+				player,
+			),
+	};
+}
+
+
+function formatGameLengthContext(
+	occurrences:
+		GameLengthOccurrence[],
+	player: string | null,
+): string | undefined {
+	if (
+		occurrences.length === 0
+	) {
+		return undefined;
+	}
+
+	const latest =
+		[...occurrences].sort(
+			(a, b) =>
+				b.playedDate.localeCompare(
+					a.playedDate,
+				) ||
+				b.playedTime.localeCompare(
+					a.playedTime,
+				),
+		)[0]!;
+
+	const date =
+		formatDate(
+			latest.playedDate,
+		);
+
+	if (player === null) {
+		const matchup =
+			`${latest.player1} vs ${latest.player2}`;
+
+		return occurrences.length === 1
+			? `${matchup} on ${date}`
+			: `Last: ${matchup} on ${date}`;
+	}
+
+	const opponent =
+		latest.player1 === player
+			? latest.player2
+			: latest.player1;
+
+	return occurrences.length === 1
+		? `vs ${opponent} on ${date}`
+		: `Last: vs ${opponent} on ${date}`;
+}
+
+
+function getHandDealer(
+	firstDealer: 1 | 2,
+	handNumber: number,
+): 1 | 2 {
+	return handNumber % 2 === 1
+		? firstDealer
+		: firstDealer === 1
+			? 2
+			: 1;
+}
+
+
+function groupHandsByGame(
+	hands: HandStatisticsRecord[],
+): Map<
+	string,
+	HandStatisticsRecord[]
+> {
+	const grouped =
+		new Map<
+			string,
+			HandStatisticsRecord[]
+		>();
+
+	for (const hand of hands) {
+		const existing =
+			grouped.get(
+				hand.gameId,
+			);
+
+		if (existing) {
+			existing.push(hand);
+		} else {
+			grouped.set(
+				hand.gameId,
+				[hand],
+			);
+		}
+	}
+
+	return grouped;
+}
+
+
+function formatScopedRecord(
+	record: ScopedRecordStat,
+): string {
+	if (record.value === null) {
+		return '—';
+	}
+
+	return record.count > 1
+		? `${record.value} (x${record.count})`
+		: String(record.value);
 }
 
 function calculatePlayerStats(
@@ -1099,6 +2192,7 @@ function playerMetrics(
 	stats: PlayerStats,
 	plugin: CribbageTrackerPlugin,
 	context: StatisticContext,
+	extraStats: ScopedExtraStats,
 ): Metric[] {
 	const handPar =
 		(plugin.settings.dealerHandPar + plugin.settings.poneHandPar) / 2;
@@ -1129,6 +2223,16 @@ function playerMetrics(
 		{
 			label: 'Avg score differential',
 			value: formatNumber(stats.scoreDifferential),
+		},
+		{
+			label:
+				'Average margin of victory',
+
+			value:
+				formatNumber(
+					extraStats
+						.averageVictoryMargin,
+				),
 		},
 		{
 			label: 'When dealing first',
@@ -1255,6 +2359,91 @@ function playerMetrics(
 				stats.lowestHighHandInWinCount,
 			),
 			subtext: context.lowestHighHandInWin,
+		},
+		{
+			label:
+				'Largest final-count deficit overcome',
+			value:
+				formatScopedRecord(
+					extraStats
+						.largestFinalCountDeficit,
+				),
+			subtext:
+				extraStats
+					.largestFinalCountDeficit
+					.subtext,
+		},
+		{
+			label:
+				'Most final-count points in a win',
+			value:
+				formatScopedRecord(
+					extraStats
+						.mostFinalCountPointsWin,
+				),
+			subtext:
+				extraStats
+					.mostFinalCountPointsWin
+					.subtext,
+		},
+		{
+			label:
+				'Most final-count points in a loss',
+			value:
+				formatScopedRecord(
+					extraStats
+						.mostFinalCountPointsLoss,
+				),
+			subtext:
+				extraStats
+					.mostFinalCountPointsLoss
+					.subtext,
+		},
+		{
+			label:
+				'Largest single-round count',
+			value:
+				formatScopedRecord(
+					extraStats
+						.largestSingleRoundCount,
+				),
+			subtext:
+				extraStats
+					.largestSingleRoundCount
+					.subtext,
+		},
+		{
+			label:
+				'Average game length (hands)',
+			value:
+				formatNumber(
+					extraStats
+						.averageGameLength,
+				),
+		},
+		{
+			label:
+				'Quickest game (hands)',
+			value:
+				formatScopedRecord(
+					extraStats.quickestGame,
+				),
+			subtext:
+				extraStats
+					.quickestGame
+					.subtext,
+		},
+		{
+			label:
+				'Longest game (hands)',
+			value:
+				formatScopedRecord(
+					extraStats.longestGame,
+				),
+			subtext:
+				extraStats
+					.longestGame
+					.subtext,
 		},
 		{
 			label: 'Points / hand',

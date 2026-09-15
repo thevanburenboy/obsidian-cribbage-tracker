@@ -116,6 +116,26 @@ interface RecordContributor {
 	latestTime: string;
 }
 
+interface GameLengthOccurrence {
+	hands: number;
+
+	player1: string;
+	player2: string;
+
+	playedDate: string;
+	playedTime: string;
+}
+
+interface GroupedGameLengthRow {
+	rank: number;
+
+	hands: number;
+	count: number;
+
+	label: string;
+	subtext: string;
+}
+
 function formatRecordContributors(
 	contributors: RecordContributor[],
 	showCounts: boolean,
@@ -1263,6 +1283,26 @@ function renderRecords(
 		),
 	);
 
+	renderGameLengthRecordCard(
+		grid,
+		'Quickest game',
+		buildGameLengthOccurrences(
+			games,
+			hands,
+		),
+		'ascending',
+	);
+
+	renderGameLengthRecordCard(
+		grid,
+		'Longest game',
+		buildGameLengthOccurrences(
+			games,
+			hands,
+		),
+		'descending',
+	);
+
 	renderGroupedRecordCard(
 		grid,
 		'Largest final-count deficit overcome',
@@ -2362,6 +2402,380 @@ function compareSkunksNewestFirst(
 			a.playedTime,
 		)
 	);
+}
+
+function renderGameLengthRecordCard(
+	container: HTMLElement,
+	title: string,
+	occurrences:
+		GameLengthOccurrence[],
+	direction:
+		| 'ascending'
+		| 'descending',
+): void {
+	const card =
+		container.createDiv(
+			'cribbage-leaderboard-card',
+		);
+
+	card.createEl('h4', {
+		text: title,
+	});
+
+	const rows =
+		groupGameLengthOccurrences(
+			occurrences,
+			direction,
+		);
+
+	if (rows.length === 0) {
+		renderEmpty(
+			card,
+			'No qualifying records yet.',
+		);
+
+		return;
+	}
+
+	const rowsContainer =
+		card.createDiv(
+			'cribbage-leaderboard-rows',
+		);
+
+	for (const record of rows) {
+		const row =
+			rowsContainer.createDiv(
+				'cribbage-leaderboard-row',
+			);
+
+		const main =
+			row.createDiv(
+				'cribbage-leaderboard-row-main',
+			);
+
+		main.createSpan({
+			text:
+				`${record.rank}.`,
+
+			cls:
+				'cribbage-leaderboard-rank',
+		});
+
+		main.createSpan({
+			text:
+				record.label,
+
+			cls:
+				'cribbage-leaderboard-name',
+		});
+
+		main.createEl('strong', {
+			text:
+				record.count > 1
+					? `${record.hands} (x${record.count})`
+					: String(
+							record.hands,
+						),
+
+			cls:
+				'cribbage-leaderboard-value',
+		});
+
+		row.createDiv({
+			text:
+				record.subtext,
+
+			cls:
+				'cribbage-leaderboard-subtext',
+		});
+	}
+}
+
+function groupGameLengthOccurrences(
+	occurrences:
+		GameLengthOccurrence[],
+	direction:
+		| 'ascending'
+		| 'descending',
+): GroupedGameLengthRow[] {
+	const grouped =
+		new Map<
+			number,
+			GameLengthOccurrence[]
+		>();
+
+	for (
+		const occurrence
+		of occurrences
+	) {
+		const existing =
+			grouped.get(
+				occurrence.hands,
+			);
+
+		if (existing) {
+			existing.push(
+				occurrence,
+			);
+		} else {
+			grouped.set(
+				occurrence.hands,
+				[occurrence],
+			);
+		}
+	}
+
+	const counts =
+		Array.from(
+			grouped.keys(),
+		).sort(
+			(a, b) =>
+				direction ===
+					'descending'
+					? b - a
+					: a - b,
+		);
+
+	const rows:
+		GroupedGameLengthRow[] = [];
+
+	let rank = 1;
+
+	for (const hands of counts) {
+		if (rows.length >= 5) {
+			break;
+		}
+
+		const games =
+			grouped.get(hands) ??
+			[];
+
+		if (games.length === 0) {
+			continue;
+		}
+
+		const matchupGroups =
+			new Map<
+				string,
+				GameLengthOccurrence[]
+			>();
+
+		for (const game of games) {
+			const matchup =
+				getGameLengthMatchupLabel(
+					game,
+				);
+
+			const existing =
+				matchupGroups.get(
+					matchup,
+				);
+
+			if (existing) {
+				existing.push(game);
+			} else {
+				matchupGroups.set(
+					matchup,
+					[game],
+				);
+			}
+		}
+
+		const matchups =
+			Array.from(
+				matchupGroups.entries(),
+			).sort(
+				(a, b) => {
+					const latestA =
+						[...a[1]].sort(
+							compareGameLengthsNewestFirst,
+						)[0]!;
+
+					const latestB =
+						[...b[1]].sort(
+							compareGameLengthsNewestFirst,
+						)[0]!;
+
+					return (
+						compareGameLengthsNewestFirst(
+							latestA,
+							latestB,
+						) ||
+						a[0].localeCompare(
+							b[0],
+						)
+					);
+				},
+			);
+
+		let label: string;
+		let subtext: string;
+
+		if (matchups.length === 1) {
+			const [
+				matchup,
+				matchupGames,
+			] = matchups[0]!;
+
+			label = matchup;
+
+			const latest =
+				[...matchupGames].sort(
+					compareGameLengthsNewestFirst,
+				)[0]!;
+
+			subtext =
+				matchupGames.length === 1
+					? formatDate(
+							latest.playedDate,
+						)
+					: `Last: ${formatDate(
+							latest.playedDate,
+						)}`;
+		} else {
+			label = 'Multiple';
+
+			if (matchups.length <= 3) {
+				subtext =
+					matchups
+						.map(
+							([matchup]) =>
+								matchup,
+						)
+						.join(' • ');
+			} else {
+				const pieces =
+					matchups
+						.slice(0, 2)
+						.map(
+							([matchup]) =>
+								matchup,
+						);
+
+				pieces.push(
+					`${matchups.length - 2} others`,
+				);
+
+				subtext =
+					pieces.join(' • ');
+			}
+		}
+
+		rows.push({
+			rank,
+
+			hands,
+
+			count:
+				games.length,
+
+			label,
+			subtext,
+		});
+
+		rank +=
+			games.length;
+	}
+
+	return rows;
+}
+
+function getGameLengthMatchupLabel(
+	game: GameLengthOccurrence,
+): string {
+	const players =
+		[
+			game.player1,
+			game.player2,
+		].sort(
+			(a, b) =>
+				a.localeCompare(
+					b,
+				),
+		);
+
+	return (
+		`${players[0]} vs ${players[1]}`
+	);
+}
+
+
+function compareGameLengthsNewestFirst(
+	a: GameLengthOccurrence,
+	b: GameLengthOccurrence,
+): number {
+	return (
+		b.playedDate.localeCompare(
+			a.playedDate,
+		) ||
+		b.playedTime.localeCompare(
+			a.playedTime,
+		)
+	);
+}
+
+function buildGameLengthOccurrences(
+	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
+): GameLengthOccurrence[] {
+	const occurrences:
+		GameLengthOccurrence[] = [];
+
+	const handsByGame =
+		groupHandsByGame(
+			hands,
+		);
+
+	for (const game of games) {
+		if (
+			game.handDataIncomplete ||
+			typeof game.player1Score !==
+				'number' ||
+			typeof game.player2Score !==
+				'number'
+		) {
+			continue;
+		}
+
+		const gameHands =
+			handsByGame.get(
+				game.id,
+			) ?? [];
+
+		if (gameHands.length === 0) {
+			continue;
+		}
+
+		const player1 =
+			cleanPlayerName(
+				game.player1,
+			);
+
+		const player2 =
+			cleanPlayerName(
+				game.player2,
+			);
+
+		if (!player1 || !player2) {
+			continue;
+		}
+
+		occurrences.push({
+			hands:
+				gameHands.length,
+
+			player1,
+			player2,
+
+			playedDate:
+				game.playedDate,
+
+			playedTime:
+				game.playedTime,
+		});
+	}
+
+	return occurrences;
 }
 
 function buildHighestHandOccurrences(

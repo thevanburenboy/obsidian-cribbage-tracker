@@ -1371,6 +1371,26 @@ function renderRecords(
 		),
 		'ascending',
 	);
+
+	renderGroupedRecordCard(
+		grid,
+		'Highest Average Hand',
+		buildAverageHandOccurrences(
+			games,
+			hands,
+		),
+		'descending',
+	);
+
+	renderGroupedRecordCard(
+		grid,
+		'Lowest Average Hand',
+		buildAverageHandOccurrences(
+			games,
+			hands,
+		),
+		'ascending',
+	);
 }
 
 function renderLeaderboardCard(
@@ -1528,8 +1548,8 @@ function renderGroupedRecordCard(
 		main.createEl('strong', {
 			text:
 				record.count > 1
-					? `${record.score} (x${record.count})`
-					: String(
+					? `${formatRecordValue(record.score)} (x${record.count})`
+					: formatRecordValue(
 							record.score,
 						),
 			cls:
@@ -3303,6 +3323,100 @@ function buildFinalCountPointOccurrences(
 	return occurrences;
 }
 
+function buildAverageHandOccurrences(
+	games: GameStatisticsRecord[],
+	hands: HandStatisticsRecord[],
+): RecordOccurrence[] {
+	const occurrences:
+		RecordOccurrence[] = [];
+
+	const handsByGame =
+		groupHandsByGame(hands);
+
+	for (const game of games) {
+		if (
+			game.handDataIncomplete ||
+			typeof game.player1Score !==
+				'number' ||
+			typeof game.player2Score !==
+				'number'
+		) {
+			continue;
+		}
+
+		const gameHands =
+			handsByGame.get(
+				game.id,
+			) ?? [];
+
+		let player1Total = 0;
+		let player2Total = 0;
+		let player1Count = 0;
+		let player2Count = 0;
+
+		for (const hand of gameHands) {
+			if (
+				hand.handDataIncomplete ||
+				hand.isLastHand
+			) {
+				continue;
+			}
+
+			if (
+				typeof hand
+					.player1HandPoints ===
+				'number'
+			) {
+				player1Total +=
+					hand.player1HandPoints;
+
+				player1Count++;
+			}
+
+			if (
+				typeof hand
+					.player2HandPoints ===
+				'number'
+			) {
+				player2Total +=
+					hand.player2HandPoints;
+
+				player2Count++;
+			}
+		}
+
+		if (player1Count > 0) {
+			addRecordOccurrence(
+				occurrences,
+				player1Total /
+					player1Count,
+
+				game.player1,
+				game.player2,
+
+				game.playedDate,
+				game.playedTime,
+			);
+		}
+
+		if (player2Count > 0) {
+			addRecordOccurrence(
+				occurrences,
+				player2Total /
+					player2Count,
+
+				game.player2,
+				game.player1,
+
+				game.playedDate,
+				game.playedTime,
+			);
+		}
+	}
+
+	return occurrences;
+}
+
 function groupRecordOccurrences(
 	occurrences: RecordOccurrence[],
 	direction:
@@ -3783,6 +3897,14 @@ function formatStreakDateRange(
 			streak.endDate,
 		)}`
 	);
+}
+
+function formatRecordValue(
+	value: number,
+): string {
+	return Number.isInteger(value)
+		? String(value)
+		: value.toFixed(2);
 }
 
 function compareStreaksNewestFirst(

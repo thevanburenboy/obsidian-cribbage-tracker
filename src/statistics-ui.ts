@@ -94,6 +94,12 @@ interface GameLengthOccurrence {
 interface ScopedExtraStats {
 	averageVictoryMargin: number | null;
 
+	highestAverageHand:
+		ScopedRecordStat;
+
+	lowestAverageHand:
+		ScopedRecordStat;
+
 	largestFinalCountDeficit:
 		ScopedRecordStat;
 
@@ -442,6 +448,38 @@ function renderGlobalStats(
 				highHandExtremes.lowestHighHandInWinCount,
 			),
 			subtext: context.lowestHighHandInWin,
+		},
+		{
+			label:
+				'Highest average hand',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.highestAverageHand,
+					2,
+				),
+
+			subtext:
+				extraStats
+					.highestAverageHand
+					.subtext,
+		},
+		{
+			label:
+				'Lowest average hand',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.lowestAverageHand,
+					2,
+				),
+
+			subtext:
+				extraStats
+					.lowestAverageHand
+					.subtext,
 		},
 		{
 			label:
@@ -862,6 +900,36 @@ function renderMatchupStats(
 			),
 		],
 		[
+			'Highest average hand',
+
+			formatScopedRecord(
+				extra1
+					.highestAverageHand,
+				2,
+			),
+
+			formatScopedRecord(
+				extra2
+					.highestAverageHand,
+				2,
+			),
+		],
+		[
+			'Lowest average hand',
+
+			formatScopedRecord(
+				extra1
+					.lowestAverageHand,
+				2,
+			),
+
+			formatScopedRecord(
+				extra2
+					.lowestAverageHand,
+				2,
+			),
+		],
+		[
 			'Largest final-count deficit overcome',
 
 			formatScopedRecord(
@@ -991,6 +1059,30 @@ function renderMatchupStats(
 		[
 			'Lowest high-hand in win',
 			[context1.lowestHighHandInWin, context2.lowestHighHandInWin],
+		],
+		[
+			'Highest average hand',
+			[
+				extra1
+					.highestAverageHand
+					.subtext,
+
+				extra2
+					.highestAverageHand
+					.subtext,
+			],
+		],
+		[
+			'Lowest average hand',
+			[
+				extra1
+					.lowestAverageHand
+					.subtext,
+
+				extra2
+					.lowestAverageHand
+					.subtext,
+			],
 		],
 		[
 			'Largest final-count deficit overcome',
@@ -1248,12 +1340,86 @@ function calculateScopedExtraStats(
 	const gameLengthOccurrences:
 		GameLengthOccurrence[] = [];
 
+	const averageHandOccurrences:
+		ContextRecordOccurrence[] = [];
+
 	for (const game of relevantGames) {
 		const player1Score =
 			game.player1Score;
 
 		const player2Score =
 			game.player2Score;
+
+		/*
+		 * Per-game average hand records require a
+		 * complete hand log. The final hand is
+		 * excluded because it is not a normal
+		 * eligible hand for hand statistics.
+		 */
+		if (!game.handDataIncomplete) {
+			const gameHands =
+				handsByGame.get(game.id) ?? [];
+
+			for (const side of [1, 2] as const) {
+				const playerName =
+					side === 1
+						? game.player1
+						: game.player2;
+
+				if (
+					player !== null &&
+					playerName !== player
+				) {
+					continue;
+				}
+
+				const eligibleHands =
+					gameHands.filter(
+						(hand) =>
+							!hand.handDataIncomplete &&
+							!hand.isLastHand &&
+							typeof (
+								side === 1
+									? hand.player1HandPoints
+									: hand.player2HandPoints
+							) === 'number',
+					);
+
+				if (eligibleHands.length === 0) {
+					continue;
+				}
+
+				const total =
+					eligibleHands.reduce(
+						(sum, hand) =>
+							sum +
+							(side === 1
+								? hand.player1HandPoints!
+								: hand.player2HandPoints!),
+						0,
+					);
+
+				averageHandOccurrences.push({
+					value:
+						total /
+						eligibleHands.length,
+
+					player:
+						playerName,
+
+					opponent:
+						side === 1
+							? game.player2
+							: game.player1,
+
+					playedDate:
+						game.playedDate,
+
+					playedTime:
+						game.playedTime,
+				});
+			}
+		}
 
 		/*
 		 * Game-length statistics require a
@@ -1566,6 +1732,20 @@ function calculateScopedExtraStats(
 		averageVictoryMargin:
 			average(
 				victoryMargins,
+			),
+
+		highestAverageHand:
+			summarizeContextRecord(
+				averageHandOccurrences,
+				'maximum',
+				includePlayer,
+			),
+
+		lowestAverageHand:
+			summarizeContextRecord(
+				averageHandOccurrences,
+				'minimum',
+				includePlayer,
 			),
 
 		largestFinalCountDeficit:
@@ -1904,14 +2084,20 @@ function groupHandsByGame(
 
 function formatScopedRecord(
 	record: ScopedRecordStat,
+	decimals = 0,
 ): string {
 	if (record.value === null) {
 		return '—';
 	}
 
+	const value =
+		decimals > 0
+			? record.value.toFixed(decimals)
+			: String(record.value);
+
 	return record.count > 1
-		? `${record.value} (x${record.count})`
-		: String(record.value);
+		? `${value} (x${record.count})`
+		: value;
 }
 
 function calculatePlayerStats(
@@ -2359,6 +2545,38 @@ function playerMetrics(
 				stats.lowestHighHandInWinCount,
 			),
 			subtext: context.lowestHighHandInWin,
+		},
+		{
+			label:
+				'Highest average hand',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.highestAverageHand,
+					2,
+				),
+
+			subtext:
+				extraStats
+					.highestAverageHand
+					.subtext,
+		},
+		{
+			label:
+				'Lowest average hand',
+
+			value:
+				formatScopedRecord(
+					extraStats
+						.lowestAverageHand,
+					2,
+				),
+
+			subtext:
+				extraStats
+					.lowestAverageHand
+					.subtext,
 		},
 		{
 			label:

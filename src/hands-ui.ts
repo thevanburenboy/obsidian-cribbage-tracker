@@ -447,7 +447,7 @@ function renderHands(
 
 	panel.createEl('p', {
 		text:
-			'The final row is automatically treated as the last hand and excluded from eligible hand/crib averages. Only enter the hand points required to reach 121. If game ends during pegging and before hands are scored, enter 0 for the hand scores in the last row to avoid the penultimate round being counted as an ineligible round.',
+			'The final row is automatically treated as the last hand and excluded from eligible hand/crib averages. Eligibility is calculated from the scores entered, but you can override it for individual components of the final hand. Only enter the hand points required to reach 121. If game ends during pegging and before hands are scored, enter 0 for the hand scores in the last row to avoid the penultimate round being counted as an ineligible round.',
 		cls: 'setting-item-description',
 	});
 
@@ -545,53 +545,149 @@ function renderHandRow(
 			),
 	});
 
-    const player1Cell =
-        row.createEl('td');
 
-    const player1Par =
-        hand.dealer === 1
-            ? plugin.settings.dealerHandPar
-            : plugin.settings.poneHandPar;
+	let player1EligibilityOverride =
+		hand.player1HandEligibilityOverride;
 
-    createParLabel(
-        player1Cell,
-        player1Par,
-    );
+	let player2EligibilityOverride =
+		hand.player2HandEligibilityOverride;
 
-    const player1 =
-        createInlineNumber(
-            player1Cell,
-            hand.player1HandPoints,
-        );
+	let cribEligibilityOverride =
+		hand.cribEligibilityOverride;
 
-    attachParColor(
-        player1,
-        player1Par,
-    );
+	const effectiveEligibility =
+		hand.isLastHand
+			? plugin.database
+				.getEffectiveHandEligibility(
+					hand,
+				)
+			: null;
 
-    const player2Cell =
-        row.createEl('td');
+	const automaticEligibility =
+		hand.isLastHand
+			? plugin.database
+				.getEffectiveHandEligibility({
+					...hand,
+					player1HandEligibilityOverride:
+						null,
+					player2HandEligibilityOverride:
+						null,
+					cribEligibilityOverride:
+						null,
+				})
+			: null;
 
-    const player2Par =
-        hand.dealer === 2
-            ? plugin.settings.dealerHandPar
-            : plugin.settings.poneHandPar;
+	// Player 1 hand
+	const player1Cell =
+		row.createEl('td');
 
-    createParLabel(
-        player2Cell,
-        player2Par,
-    );
+	const player1Par =
+		hand.dealer === 1
+			? plugin.settings.dealerHandPar
+			: plugin.settings.poneHandPar;
 
-    const player2 =
-        createInlineNumber(
-        player2Cell,
-        hand.player2HandPoints,
-    );
+	createParLabel(
+		player1Cell,
+		player1Par,
+	);
 
-    attachParColor(
-        player2,
-        player2Par,
-    );
+	const player1ScoreRow =
+		player1Cell.createDiv(
+			'cribbage-edit-score',
+		);
+
+	const player1 =
+		createInlineNumber(
+			player1ScoreRow,
+			hand.player1HandPoints,
+		);
+
+	attachParColor(
+		player1,
+		player1Par,
+	);
+
+	if (
+		effectiveEligibility !== null &&
+		automaticEligibility !== null
+	) {
+		createEligibilityControl(
+			player1ScoreRow,
+			effectiveEligibility.player1HandEligible,
+			player1EligibilityOverride,
+			automaticEligibility.player1HandEligible,
+			async (override) => {
+				player1EligibilityOverride =
+					override;
+
+				await plugin.database
+					.updateHandEligibilityOverrides(
+						hand.id,
+						player1EligibilityOverride,
+						player2EligibilityOverride,
+						cribEligibilityOverride,
+					);
+
+				onRefresh();
+			},
+		);
+	}
+
+	// Player 2 hand
+	const player2Cell =
+		row.createEl('td');
+
+	const player2Par =
+		hand.dealer === 2
+			? plugin.settings.dealerHandPar
+			: plugin.settings.poneHandPar;
+
+	createParLabel(
+		player2Cell,
+		player2Par,
+	);
+
+	const player2ScoreRow =
+		player2Cell.createDiv(
+			'cribbage-edit-score',
+		);
+
+	const player2 =
+		createInlineNumber(
+			player2ScoreRow,
+			hand.player2HandPoints,
+		);
+
+	attachParColor(
+		player2,
+		player2Par,
+	);
+
+	if (
+		effectiveEligibility !== null &&
+		automaticEligibility !== null
+	) {
+		createEligibilityControl(
+			player2ScoreRow,
+			effectiveEligibility.player2HandEligible,
+			player2EligibilityOverride,
+			automaticEligibility.player2HandEligible,
+			async (override) => {
+				player2EligibilityOverride =
+					override;
+
+				await plugin.database
+					.updateHandEligibilityOverrides(
+						hand.id,
+						player1EligibilityOverride,
+						player2EligibilityOverride,
+						cribEligibilityOverride,
+					);
+
+				onRefresh();
+			},
+		);
+	}
 
     row.createEl('td', {
         text:
@@ -602,25 +698,58 @@ function renderHandRow(
                     : 'Unknown',
     });
 
-    const cribCell =
-        row.createEl('td');
+	// Crib
+	const cribCell =
+		row.createEl('td');
 
-    createParLabel(
-        cribCell,
-        plugin.settings.cribPar,
-    );
+	createParLabel(
+		cribCell,
+		plugin.settings.cribPar,
+	);
 
-    const crib =
-        createInlineNumber(
-        cribCell,
-        hand.cribPoints,
-    );
+	const cribScoreRow =
+		cribCell.createDiv(
+			'cribbage-edit-score',
+		);
 
-    attachParColor(
-        crib,
-        plugin.settings.cribPar,
-    );
+	const crib =
+		createInlineNumber(
+			cribScoreRow,
+			hand.cribPoints,
+		);
 
+	attachParColor(
+		crib,
+		plugin.settings.cribPar,
+	);
+
+	if (
+		effectiveEligibility !== null &&
+		automaticEligibility !== null
+	) {
+		createEligibilityControl(
+			cribScoreRow,
+			effectiveEligibility.cribEligible,
+			cribEligibilityOverride,
+			automaticEligibility.cribEligible,
+			async (override) => {
+				cribEligibilityOverride =
+					override;
+
+				await plugin.database
+					.updateHandEligibilityOverrides(
+						hand.id,
+						player1EligibilityOverride,
+						player2EligibilityOverride,
+						cribEligibilityOverride,
+					);
+
+				onRefresh();
+			},
+		);
+	}
+
+	// Status
 	row.createEl('td', {
 		text:
 			hand.isLastHand
@@ -628,6 +757,7 @@ function renderHandRow(
 				: '',
 	});
 
+	// Actions
 	const actions =
 		row.createEl('td');
 
@@ -655,6 +785,24 @@ function renderHandRow(
                 if (!input) {
                     return;
                 }
+
+				/*
+				 * Only final-hand rows have eligibility
+				 * controls, so only attach the overrides
+				 * when this is the final row.
+				 *
+				 * null means "use automatic eligibility."
+				 */
+				if (hand.isLastHand) {
+					input.player1HandEligibilityOverride =
+						player1EligibilityOverride;
+
+					input.player2HandEligibilityOverride =
+						player2EligibilityOverride;
+
+					input.cribEligibilityOverride =
+						cribEligibilityOverride;
+				}
 
                 try {
                     await plugin.database
@@ -930,6 +1078,102 @@ function createInlineNumber(
 	}
 
 	return input;
+}
+
+function createEligibilityControl(
+	container: HTMLElement,
+	effectiveEligible: boolean,
+	override: boolean | null,
+	automaticEligible: boolean,
+	onOverrideChange: (
+		override: boolean | null,
+	) => Promise<void>,
+): void {
+	const eligibility =
+		container.createDiv(
+			'cribbage-eligibility',
+		);
+
+	const label =
+		eligibility.createEl('label');
+
+	const checkbox =
+		label.createEl('input', {
+			type: 'checkbox',
+		});
+
+	checkbox.checked =
+		effectiveEligible;
+
+	label.createSpan({
+		text: 'Eligible',
+	});
+
+	const reset =
+		eligibility.createEl('button', {
+			text: 'Auto',
+			cls:
+				'cribbage-eligibility-reset',
+			attr: {
+				'aria-label': 'Use automatic eligibility',
+				title: 'Use automatic eligibility',
+			},
+		});
+
+	reset.hidden =
+		override === null;
+
+
+	checkbox.addEventListener(
+		'change',
+		() => {
+			void (async () => {
+				const previousChecked =
+					checkbox.checked;
+
+				try {
+					await onOverrideChange(
+						checkbox.checked,
+					);
+
+					reset.hidden = false;
+				} catch (error) {
+					console.error(error);
+
+					checkbox.checked =
+						!previousChecked;
+
+					new Notice(
+						'Could not update eligibility.',
+					);
+				}
+			})();
+		},
+	);
+
+	reset.addEventListener(
+		'click',
+		() => {
+			void (async () => {
+				try {
+					await onOverrideChange(
+						null,
+					);
+
+					checkbox.checked =
+						automaticEligible;
+
+					reset.hidden = true;
+				} catch (error) {
+					console.error(error);
+
+					new Notice(
+						'Could not reset eligibility.',
+					);
+				}
+			})();
+		},
+	);
 }
 
 function parseOptionalNumber(

@@ -333,58 +333,66 @@ function buildPlayerAggregates(
 			);
 
 		/*
-		 * These match our normal hand/crib
-		 * eligibility rules:
+		 * Hand / crib statistics use effective
+		 * component-level eligibility.
 		 *
-		 * - incomplete games excluded
-		 * - final hand excluded
+		 * A component can be eligible even when
+		 * it belongs to the final hand, provided
+		 * the user explicitly marked that component
+		 * eligible.
 		 */
+		const {
+			player1HandEligible,
+			player2HandEligible,
+			cribEligible,
+		} =
+			getEffectiveHandEligibility(
+				hand,
+			);
+
 		if (
-			!hand.handDataIncomplete &&
-			!hand.isLastHand
+			player1HandEligible &&
+			typeof hand.player1HandPoints ===
+				'number'
 		) {
-			if (
-				typeof hand
-					.player1HandPoints ===
+			p1.handPointsTotal +=
+				hand.player1HandPoints;
+
+			p1.handCount++;
+		}
+
+		if (
+			player2HandEligible &&
+			typeof hand.player2HandPoints ===
 				'number'
-			) {
-				p1.handPointsTotal +=
-					hand.player1HandPoints;
+		) {
+			p2.handPointsTotal +=
+				hand.player2HandPoints;
 
-				p1.handCount++;
-			}
+			p2.handCount++;
+		}
 
-			if (
-				typeof hand
-					.player2HandPoints ===
-				'number'
-			) {
-				p2.handPointsTotal +=
-					hand.player2HandPoints;
+		if (
+			cribEligible &&
+			typeof hand.cribPoints ===
+				'number' &&
+			hand.firstDealer !== null
+		) {
+			const dealer =
+				getHandDealer(
+					hand.firstDealer,
+					hand.handNumber,
+				);
 
-				p2.handCount++;
-			}
+			const owner =
+				dealer === 1
+					? p1
+					: p2;
 
-			if (
-				typeof hand.cribPoints ===
-				'number'
-			) {
-				const dealer =
-					getHandDealer(
-						hand.firstDealer,
-						hand.handNumber,
-					);
+			owner.cribPointsTotal +=
+				hand.cribPoints;
 
-				const owner =
-					dealer === 1
-						? p1
-						: p2;
-
-				owner.cribPointsTotal +=
-					hand.cribPoints;
-
-				owner.cribCount++;
-			}
+			owner.cribCount++;
 		}
 	}
 
@@ -2822,10 +2830,19 @@ function buildHighestHandOccurrences(
 			for (
 				const hand of gameHands
 			) {
+				const {
+					player1HandEligible,
+					player2HandEligible,
+				} =
+					getEffectiveHandEligibility(
+						hand,
+					);
+
 				if (
+					player1HandEligible &&
 					typeof hand
 						.player1HandPoints ===
-					'number'
+						'number'
 				) {
 					addRecordOccurrence(
 						occurrences,
@@ -2842,9 +2859,10 @@ function buildHighestHandOccurrences(
 				}
 
 				if (
+					player2HandEligible &&
 					typeof hand
 						.player2HandPoints ===
-					'number'
+						'number'
 				) {
 					addRecordOccurrence(
 						occurrences,
@@ -3355,17 +3373,19 @@ function buildAverageHandOccurrences(
 		let player2Count = 0;
 
 		for (const hand of gameHands) {
-			if (
-				hand.handDataIncomplete ||
-				hand.isLastHand
-			) {
-				continue;
-			}
+			const {
+				player1HandEligible,
+				player2HandEligible,
+			} =
+				getEffectiveHandEligibility(
+					hand,
+				);
 
 			if (
+				player1HandEligible &&
 				typeof hand
 					.player1HandPoints ===
-				'number'
+					'number'
 			) {
 				player1Total +=
 					hand.player1HandPoints;
@@ -3374,9 +3394,10 @@ function buildAverageHandOccurrences(
 			}
 
 			if (
+				player2HandEligible &&
 				typeof hand
 					.player2HandPoints ===
-				'number'
+					'number'
 			) {
 				player2Total +=
 					hand.player2HandPoints;
@@ -3746,6 +3767,95 @@ function getHandDealer(
 	return firstDealer === 1
 		? 2
 		: 1;
+}
+
+function getEffectiveHandEligibility(
+	hand: HandStatisticsRecord,
+): {
+	player1HandEligible: boolean;
+	player2HandEligible: boolean;
+	cribEligible: boolean;
+} {
+	let player1HandEligible =
+		!hand.isLastHand;
+
+	let player2HandEligible =
+		!hand.isLastHand;
+
+	let cribEligible =
+		!hand.isLastHand;
+
+	if (
+		hand.isLastHand &&
+		hand.firstDealer !== null
+	) {
+		const dealer =
+			getHandDealer(
+				hand.firstDealer,
+				hand.handNumber,
+			);
+
+		const dealerPoints =
+			dealer === 1
+				? hand.player1HandPoints
+				: hand.player2HandPoints;
+
+		if (
+			hand.cribPoints !== null &&
+			hand.cribPoints > 0
+		) {
+			player1HandEligible = true;
+			player2HandEligible = true;
+		} else if (
+			dealerPoints !== null &&
+			dealerPoints > 0
+		) {
+			const pone =
+				dealer === 1 ? 2 : 1;
+
+			if (pone === 1) {
+				player1HandEligible = true;
+			} else {
+				player2HandEligible = true;
+			}
+		}
+
+		cribEligible = false;
+	}
+
+	/*
+	 * Explicit overrides take precedence over
+	 * the automatic eligibility calculation.
+	 */
+	if (
+		hand.player1HandEligibilityOverride !==
+		null
+	) {
+		player1HandEligible =
+			hand.player1HandEligibilityOverride;
+	}
+
+	if (
+		hand.player2HandEligibilityOverride !==
+		null
+	) {
+		player2HandEligible =
+			hand.player2HandEligibilityOverride;
+	}
+
+	if (
+		hand.cribEligibilityOverride !==
+		null
+	) {
+		cribEligible =
+			hand.cribEligibilityOverride;
+	}
+
+	return {
+		player1HandEligible,
+		player2HandEligible,
+		cribEligible,
+	};
 }
 
 function groupHandsByGame(

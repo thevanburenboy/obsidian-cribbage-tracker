@@ -1351,74 +1351,94 @@ function calculateScopedExtraStats(
 			game.player2Score;
 
 		/*
-		 * Per-game average hand records require a
-		 * complete hand log. The final hand is
-		 * excluded because it is not a normal
-		 * eligible hand for hand statistics.
+		 * Per-game average hand records use the
+		 * effective eligibility of each individual
+		 * hand component.
+		 *
+		 * This intentionally does not use
+		 * game.handDataIncomplete or
+		 * hand.handDataIncomplete as a separate
+		 * exclusion. A manually eligible final-hand
+		 * component is allowed to participate.
+		 *
+		 * Components without a numeric point value
+		 * are still excluded.
 		 */
-		if (!game.handDataIncomplete) {
-			const gameHands =
-				handsByGame.get(game.id) ?? [];
+		const gameHands =
+			handsByGame.get(game.id) ?? [];
 
-			for (const side of [1, 2] as const) {
-				const playerName =
-					side === 1
-						? game.player1
-						: game.player2;
+		for (const side of [1, 2] as const) {
+			const playerName =
+				side === 1
+					? game.player1
+					: game.player2;
 
-				if (
-					player !== null &&
-					playerName !== player
-				) {
-					continue;
-				}
-
-				const eligibleHands =
-					gameHands.filter(
-						(hand) =>
-							!hand.handDataIncomplete &&
-							!hand.isLastHand &&
-							typeof (
-								side === 1
-									? hand.player1HandPoints
-									: hand.player2HandPoints
-							) === 'number',
-					);
-
-				if (eligibleHands.length === 0) {
-					continue;
-				}
-
-				const total =
-					eligibleHands.reduce(
-						(sum, hand) =>
-							sum +
-							(side === 1
-								? hand.player1HandPoints!
-								: hand.player2HandPoints!),
-						0,
-					);
-
-				averageHandOccurrences.push({
-					value:
-						total /
-						eligibleHands.length,
-
-					player:
-						playerName,
-
-					opponent:
-						side === 1
-							? game.player2
-							: game.player1,
-
-					playedDate:
-						game.playedDate,
-
-					playedTime:
-						game.playedTime,
-				});
+			if (
+				player !== null &&
+				playerName !== player
+			) {
+				continue;
 			}
+
+			const eligibleHands =
+				gameHands.filter((hand) => {
+					const {
+						player1HandEligible,
+						player2HandEligible,
+					} =
+						getEffectiveHandEligibility(
+							hand,
+						);
+
+					const eligible =
+						side === 1
+							? player1HandEligible
+							: player2HandEligible;
+
+					const points =
+						side === 1
+							? hand.player1HandPoints
+							: hand.player2HandPoints;
+
+					return (
+						eligible &&
+						typeof points === 'number'
+					);
+				});
+
+			if (eligibleHands.length === 0) {
+				continue;
+			}
+
+			const total =
+				eligibleHands.reduce(
+					(sum, hand) =>
+						sum +
+						(side === 1
+							? hand.player1HandPoints!
+							: hand.player2HandPoints!),
+					0,
+				);
+
+			averageHandOccurrences.push({
+				value:
+					total /
+					eligibleHands.length,
+
+				player:
+					playerName,
+
+				opponent:
+					side === 1
+						? game.player2
+						: game.player1,
+
+				playedDate:
+					game.playedDate,
+
+				playedTime:
+					game.playedTime,
+			});
 		}
 
 		/*
@@ -1501,11 +1521,6 @@ function calculateScopedExtraStats(
 				}
 			}
 		}
-
-		const gameHands =
-			handsByGame.get(
-				game.id,
-			) ?? [];
 
 		const finalHand =
 			gameHands.find(
@@ -2049,6 +2064,94 @@ function getHandDealer(
 			: 1;
 }
 
+function getEffectiveHandEligibility(
+	hand: HandStatisticsRecord,
+): {
+	player1HandEligible: boolean;
+	player2HandEligible: boolean;
+	cribEligible: boolean;
+} {
+	let player1HandEligible =
+		!hand.isLastHand;
+
+	let player2HandEligible =
+		!hand.isLastHand;
+
+	let cribEligible =
+		!hand.isLastHand;
+
+	if (
+		hand.isLastHand &&
+		hand.firstDealer !== null
+	) {
+		const dealer =
+			getHandDealer(
+				hand.firstDealer,
+				hand.handNumber,
+			);
+
+		const dealerPoints =
+			dealer === 1
+				? hand.player1HandPoints
+				: hand.player2HandPoints;
+
+		if (
+			hand.cribPoints !== null &&
+			hand.cribPoints > 0
+		) {
+			player1HandEligible = true;
+			player2HandEligible = true;
+		} else if (
+			dealerPoints !== null &&
+			dealerPoints > 0
+		) {
+			const pone =
+				dealer === 1 ? 2 : 1;
+
+			if (pone === 1) {
+				player1HandEligible = true;
+			} else {
+				player2HandEligible = true;
+			}
+		}
+
+		cribEligible = false;
+	}
+
+	/*
+	 * Explicit overrides take precedence over
+	 * automatic eligibility.
+	 */
+	if (
+		hand.player1HandEligibilityOverride !==
+		null
+	) {
+		player1HandEligible =
+			hand.player1HandEligibilityOverride;
+	}
+
+	if (
+		hand.player2HandEligibilityOverride !==
+		null
+	) {
+		player2HandEligible =
+			hand.player2HandEligibilityOverride;
+	}
+
+	if (
+		hand.cribEligibilityOverride !==
+		null
+	) {
+		cribEligible =
+			hand.cribEligibilityOverride;
+	}
+
+	return {
+		player1HandEligible,
+		player2HandEligible,
+		cribEligible,
+	};
+}
 
 function groupHandsByGame(
 	hands: HandStatisticsRecord[],

@@ -373,30 +373,54 @@ function renderTrackingSettings(
 
 	createSummaryValue(
 		stats,
-		`${game.player1} eligible hand pts`,
-		String(
-			summary.player1HandPointsEligible,
-		),
+		`${game.player1} hand`,
+		`${summary.player1HandPointsEligible} total / ${
+			summary.eligibleRoundCount > 0
+				? (
+						summary.player1HandPointsEligible /
+						summary.eligibleRoundCount
+					).toFixed(2)
+				: '—'
+		} per hand`,
 	);
 
 	createSummaryValue(
 		stats,
-		`${game.player2} eligible hand pts`,
-		String(
-			summary.player2HandPointsEligible,
-		),
+		`${game.player2} hand`,
+		`${summary.player2HandPointsEligible} total / ${
+			summary.eligibleRoundCount > 0
+				? (
+						summary.player2HandPointsEligible /
+						summary.eligibleRoundCount
+					).toFixed(2)
+				: '—'
+		} per hand`,
 	);
 
 	createSummaryValue(
 		stats,
-		`${game.player1} eligible crib`,
-		`${summary.player1CribPointsEligible} / ${summary.player1EligibleCribCount}`,
+		`${game.player1} crib`,
+		`${summary.player1CribPointsEligible} total / ${
+			summary.player1EligibleCribCount > 0
+				? (
+						summary.player1CribPointsEligible /
+						summary.player1EligibleCribCount
+					).toFixed(2)
+				: '—'
+		} per crib`,
 	);
 
 	createSummaryValue(
 		stats,
-		`${game.player2} eligible crib`,
-		`${summary.player2CribPointsEligible} / ${summary.player2EligibleCribCount}`,
+		`${game.player2} crib`,
+		`${summary.player2CribPointsEligible} total / ${
+			summary.player2EligibleCribCount > 0
+				? (
+						summary.player2CribPointsEligible /
+						summary.player2EligibleCribCount
+					).toFixed(2)
+				: '—'
+		} per crib`,
 	);
 
     createSummaryValue(

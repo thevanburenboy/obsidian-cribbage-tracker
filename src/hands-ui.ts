@@ -517,6 +517,7 @@ function renderHands(
 		panel,
 		plugin,
 		game,
+		hands,
 		onRefresh,
 	);
 }
@@ -723,10 +724,26 @@ function renderHandRow(
 	);
 }
 
+function getNextDealer(
+	game: GameRecord,
+	handCount: number,
+): 1 | 2 | null {
+	if (game.firstDealer !== 1 && game.firstDealer !== 2) {
+		return null;
+	}
+
+	return handCount % 2 === 0
+		? game.firstDealer
+		: game.firstDealer === 1
+			? 2
+			: 1;
+}
+
 function renderAddHand(
 	container: HTMLElement,
 	plugin: CribbageTrackerPlugin,
 	game: GameRecord,
+	hands: HandRecord[],
 	onRefresh: () => void,
 ): void {
 	container.createEl('h3', {
@@ -738,24 +755,39 @@ function renderAddHand(
 			'cribbage-add-hand-grid',
 		);
 
+	const nextDealer =
+		getNextDealer(
+			game,
+			hands.length,
+		);
+
+	const dealerName =
+		nextDealer === 1
+			? game.player1
+			: nextDealer === 2
+				? game.player2
+				: null;
+
 	const player1 =
 		createNumberField(
 			grid,
-			`${game.player1} hand`,
+			`${game.player1} Hand`,
 			null,
 		);
 
 	const player2 =
 		createNumberField(
 			grid,
-			`${game.player2} hand`,
+			`${game.player2} Hand`,
 			null,
 		);
 
 	const crib =
 		createNumberField(
 			grid,
-			'Crib',
+			dealerName
+				? `${dealerName} Crib`
+				: 'Crib',
 			null,
 		);
 

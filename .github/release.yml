@@ -13,8 +13,8 @@ changelog:
               - chore
               - documentation
         - title: '🤖 Dependency Updates'
-          authors:
-              - dependabot[bot]
+          labels:
+              - dependencies
     exclude:
         labels:
             - skip-changelog

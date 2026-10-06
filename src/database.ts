@@ -3,7 +3,7 @@ import sqlWasmBinary from 'sql.js/dist/sql-wasm.wasm';
 import { normalizePath } from 'obsidian';
 import type CribbageTrackerPlugin from './main';
 
-const CURRENT_SCHEMA_VERSION = 5;
+const CURRENT_SCHEMA_VERSION = 6;
 
 export interface GameRecord {
 	id: string;
@@ -57,6 +57,9 @@ export interface GameHandSummary {
 
 	player1HandPointsEligible: number;
 	player2HandPointsEligible: number;
+
+	player1EligibleHandCount: number;
+	player2EligibleHandCount: number;
 
 	player1CribPointsTotal: number;
 	player2CribPointsTotal: number;
@@ -133,6 +136,10 @@ export interface HandStatisticsRecord {
 	player2HandPoints: number | null;
 
 	cribPoints: number | null;
+
+	player1HandEligibilityOverride: boolean | null;
+	player2HandEligibilityOverride: boolean | null;
+	cribEligibilityOverride: boolean | null;
 
 	handDataIncomplete: boolean;
 }
@@ -1574,6 +1581,9 @@ export class CribbageDatabase {
                 player_1_hand_points_eligible,
                 player_2_hand_points_eligible,
 
+                player_1_eligible_hand_count,
+                player_2_eligible_hand_count,
+
                 player_1_crib_points_total,
                 player_2_crib_points_total,
 
@@ -1585,7 +1595,6 @@ export class CribbageDatabase {
 
                 player_1_eligible_crib_count,
                 player_2_eligible_crib_count,
-
 
                 player_1_pegging_points_total,
                 player_2_pegging_points_total,
@@ -1615,28 +1624,29 @@ export class CribbageDatabase {
 			player1HandPointsEligible: Number(row[4]),
 			player2HandPointsEligible: Number(row[5]),
 
-			player1CribPointsTotal: Number(row[6]),
-			player2CribPointsTotal: Number(row[7]),
+			player1EligibleHandCount: Number(row[6]),
+			player2EligibleHandCount: Number(row[7]),
 
-			player1CribPointsEligible: Number(row[8]),
-			player2CribPointsEligible: Number(row[9]),
+			player1CribPointsTotal: Number(row[8]),
+			player2CribPointsTotal: Number(row[9]),
 
-			player1CribCount: Number(row[10]),
-			player2CribCount: Number(row[11]),
+			player1CribPointsEligible: Number(row[10]),
+			player2CribPointsEligible: Number(row[11]),
 
-			player1EligibleCribCount: Number(row[12]),
+			player1CribCount: Number(row[12]),
+			player2CribCount: Number(row[13]),
 
-			player2EligibleCribCount: Number(row[13]),
+			player1EligibleCribCount: Number(row[14]),
+			player2EligibleCribCount: Number(row[15]),
 
-			player1PeggingPointsTotal: Number(row[14]),
-
-			player2PeggingPointsTotal: Number(row[15]),
+			player1PeggingPointsTotal: Number(row[16]),
+			player2PeggingPointsTotal: Number(row[17]),
 
 			player1HighHandCalculated:
-				typeof row[16] === 'number' ? row[16] : null,
+				typeof row[18] === 'number' ? row[18] : null,
 
 			player2HighHandCalculated:
-				typeof row[17] === 'number' ? row[17] : null,
+				typeof row[19] === 'number' ? row[19] : null,
 		};
 	}
 
@@ -1770,6 +1780,10 @@ export class CribbageDatabase {
 
                 h.crib_points,
 
+				h.player_1_hand_eligibility_override,
+				h.player_2_hand_eligibility_override,
+				h.crib_eligibility_override,
+
                 g.hand_data_incomplete
 
             FROM hands h
@@ -1786,12 +1800,17 @@ export class CribbageDatabase {
 		const rows = result[0]?.values ?? [];
 
 		return rows.flatMap((row) => {
-			const firstDealer = row[8] === 1 ? 1 : row[8] === 2 ? 2 : null;
+			const firstDealer =
+				row[8] === 1
+					? 1
+					: row[8] === 2
+						? 2
+						: null;
 
 			/*
-			 * Hands should only exist when the
-			 * first dealer is known.
-			 */
+			* Hands should only exist when the
+			* first dealer is known.
+			*/
 			if (firstDealer === null) {
 				return [];
 			}
@@ -1823,6 +1842,21 @@ export class CribbageDatabase {
 						typeof row[10] === 'number' ? row[10] : null,
 
 					cribPoints: typeof row[11] === 'number' ? row[11] : null,
+
+					player1HandEligibilityOverride:
+						row[12] === null
+							? null
+							: row[12] === 1,
+
+					player2HandEligibilityOverride:
+						row[13] === null
+							? null
+							: row[13] === 1,
+
+					cribEligibilityOverride:
+						row[14] === null
+							? null
+							: row[14] === 1,
 
 					handDataIncomplete: row[12] === 1,
 				},
@@ -2090,6 +2124,9 @@ export class CribbageDatabase {
                     player_1_hand_points_eligible = 0,
                     player_2_hand_points_eligible = 0,
 
+                    player_1_eligible_hand_count = 0,
+                    player_2_eligible_hand_count = 0,
+
                     player_1_crib_points_total = 0,
                     player_2_crib_points_total = 0,
 
@@ -2127,6 +2164,9 @@ export class CribbageDatabase {
 
 		let player1HandEligible = 0;
 		let player2HandEligible = 0;
+
+		let player1EligibleHandCount = 0;
+		let player2EligibleHandCount = 0;
 
 		let player1CribTotal = 0;
 		let player2CribTotal = 0;
@@ -2188,6 +2228,7 @@ export class CribbageDatabase {
 
 				if (player1HandIsEligible) {
 					player1HandEligible += player1Points;
+					player1EligibleHandCount++;
 				}
 			}
 
@@ -2201,6 +2242,7 @@ export class CribbageDatabase {
 
 				if (player2HandIsEligible) {
 					player2HandEligible += player2Points;
+					player2EligibleHandCount++;
 				}
 			}
 
@@ -2251,6 +2293,9 @@ export class CribbageDatabase {
                 player_1_hand_points_eligible = ?,
                 player_2_hand_points_eligible = ?,
 
+                player_1_eligible_hand_count = ?,
+                player_2_eligible_hand_count = ?,
+
                 player_1_crib_points_total = ?,
                 player_2_crib_points_total = ?,
 
@@ -2281,6 +2326,9 @@ export class CribbageDatabase {
 
 				player1HandEligible,
 				player2HandEligible,
+
+				player1EligibleHandCount,
+				player2EligibleHandCount,
 
 				player1CribTotal,
 				player2CribTotal,
@@ -2663,6 +2711,24 @@ export class CribbageDatabase {
 				db.run('ROLLBACK;');
 				throw error;
 			}
+		}
+
+		if (version < 6) {
+			db.run(`
+				ALTER TABLE games
+				ADD COLUMN player_1_eligible_hand_count INTEGER NOT NULL DEFAULT 0;
+			`);
+
+			db.run(`
+				ALTER TABLE games
+				ADD COLUMN player_2_eligible_hand_count INTEGER NOT NULL DEFAULT 0;
+			`);
+
+			db.run(`
+				PRAGMA user_version = 6;
+			`);
+
+			version = 6;
 		}
 
 		if (version !== originalVersion) {

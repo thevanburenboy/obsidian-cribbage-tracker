@@ -375,10 +375,10 @@ function renderTrackingSettings(
 		stats,
 		`${game.player1} hand`,
 		`${summary.player1HandPointsEligible} total / ${
-			summary.eligibleRoundCount > 0
+			summary.player1EligibleHandCount > 0
 				? (
 						summary.player1HandPointsEligible /
-						summary.eligibleRoundCount
+						summary.player1EligibleHandCount
 					).toFixed(2)
 				: '—'
 		} per hand`,
@@ -388,10 +388,10 @@ function renderTrackingSettings(
 		stats,
 		`${game.player2} hand`,
 		`${summary.player2HandPointsEligible} total / ${
-			summary.eligibleRoundCount > 0
+			summary.player2EligibleHandCount > 0
 				? (
 						summary.player2HandPointsEligible /
-						summary.eligibleRoundCount
+						summary.player2EligibleHandCount
 					).toFixed(2)
 				: '—'
 		} per hand`,

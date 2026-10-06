@@ -12,8 +12,9 @@ changelog:
           labels:
               - chore
               - documentation
+        - title: '🤖 Dependency Updates'
+          authors:
+              - dependabot[bot]
     exclude:
         labels:
             - skip-changelog
-        authors:
-            - dependabot[bot]

@@ -1725,6 +1725,23 @@ export class CribbageDatabase {
 		});
 	}
 
+	public recalculateAllGameAggregates(): void {
+		const db = this.requireDb();
+
+		const result = db.exec(`
+			SELECT id
+			FROM games;
+		`);
+
+		const rows = result[0]?.values ?? [];
+
+		for (const row of rows) {
+			const gameId = String(row[0]);
+
+			this.recalculateGameAggregates(gameId);
+		}
+	}
+
 	private recalculateGameAggregates(gameId: string): void {
 		const db = this.requireDb();
 
@@ -1845,7 +1862,51 @@ export class CribbageDatabase {
 
 			const cribPoints = typeof row[3] === 'number' ? row[3] : null;
 
-			const eligible = handNumber !== lastHandNumber;
+			const isLastHand = handNumber === lastHandNumber;
+
+			let player1HandIsEligible = !isLastHand;
+			let player2HandIsEligible = !isLastHand;
+			let cribIsEligible = !isLastHand;
+
+			if (isLastHand && firstDealer !== null) {
+				const dealer = this.getDealerForHand(firstDealer, handNumber);
+
+				const dealerPoints =
+					dealer === 1 ? player1Points : player2Points;
+
+				/*
+				* Cribbage counting order:
+				*
+				* 1. Pone counts their hand.
+				* 2. Dealer counts their hand.
+				* 3. Dealer counts the crib.
+				*
+				* On the final hand we cannot know whether a
+				* hand was fully counted from its own score alone.
+				* However, if the dealer has points, we know the
+				* pone must have finished counting. If the crib
+				* has points, we know both hands must have finished
+				* counting.
+				*/
+				if (cribPoints !== null && cribPoints > 0) {
+					player1HandIsEligible = true;
+					player2HandIsEligible = true;
+				} else if (dealerPoints !== null && dealerPoints > 0) {
+					const pone = dealer === 1 ? 2 : 1;
+
+					if (pone === 1) {
+						player1HandIsEligible = true;
+					} else {
+						player2HandIsEligible = true;
+					}
+				}
+
+				/*
+				* The final crib is never eligible because its points
+				* may themselves represent an incomplete count.
+				*/
+				cribIsEligible = false;
+			}
 
 			if (player1Points !== null) {
 				player1HandTotal += player1Points;
@@ -1855,7 +1916,7 @@ export class CribbageDatabase {
 						? player1Points
 						: Math.max(player1HighHand, player1Points);
 
-				if (eligible) {
+				if (player1HandIsEligible) {
 					player1HandEligible += player1Points;
 				}
 			}
@@ -1868,7 +1929,7 @@ export class CribbageDatabase {
 						? player2Points
 						: Math.max(player2HighHand, player2Points);
 
-				if (eligible) {
+				if (player2HandIsEligible) {
 					player2HandEligible += player2Points;
 				}
 			}
@@ -1881,7 +1942,7 @@ export class CribbageDatabase {
 
 					player1CribCount++;
 
-					if (eligible) {
+					if (cribIsEligible) {
 						player1CribEligible += cribPoints;
 
 						player1EligibleCribCount++;
@@ -1891,7 +1952,7 @@ export class CribbageDatabase {
 
 					player2CribCount++;
 
-					if (eligible) {
+					if (cribIsEligible) {
 						player2CribEligible += cribPoints;
 
 						player2EligibleCribCount++;

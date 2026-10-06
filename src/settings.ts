@@ -443,6 +443,51 @@ export class CribbageTrackerSettingTab
 							);
 						},
 					},
+					{
+						name:
+							'Recalculate game statistics',
+
+						desc:
+							'Recalculate all game aggregates using the current hand eligibility rules. This does not change individual hand data. Useful if there have been code changes to hand eligibility that you want to cascade over your prior hand data.',
+
+						render: (setting) => {
+							setting.addButton(
+								(button) =>
+									button
+										.setButtonText(
+											'Recalculate all games',
+										)
+										.onClick(
+											() => {
+												void (async () => {
+													const confirmed =
+														await confirmAction(
+															this.plugin.app,
+															'Recalculate aggregate statistics for all games? Individual hand data will not be changed.',
+															'Recalculate',
+														);
+
+													if (!confirmed) {
+														return;
+													}
+
+													this.plugin.database
+														.recalculateAllGameAggregates();
+
+													await this.plugin.database.save();
+
+													this.plugin.refreshViews();
+
+													new Notice(
+														'All game statistics recalculated.',
+														2000,
+													);
+												})();
+											},
+										),
+							);
+						},
+					},
 				],
 			},
 		];

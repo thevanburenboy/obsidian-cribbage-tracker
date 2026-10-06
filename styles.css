@@ -225,6 +225,29 @@
 	gap: 6px;
 }
 
+.cribbage-eligibility {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.cribbage-eligibility label {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.cribbage-eligibility input[type='checkbox'] {
+	margin: 0;
+}
+
+.cribbage-eligibility-reset {
+	padding: 0 4px;
+	font-size: var(--font-ui-smaller);
+}
+
 @media (max-width: 600px) {
 	.cribbage-row-actions {
 		flex-direction: column;

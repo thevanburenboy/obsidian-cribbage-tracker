@@ -3,7 +3,7 @@ import sqlWasmBinary from 'sql.js/dist/sql-wasm.wasm';
 import { normalizePath } from 'obsidian';
 import type CribbageTrackerPlugin from './main';
 
-const CURRENT_SCHEMA_VERSION = 4;
+const CURRENT_SCHEMA_VERSION = 5;
 
 export interface GameRecord {
 	id: string;
@@ -40,6 +40,11 @@ export interface HandRecord {
 	player1HandPoints: number | null;
 	player2HandPoints: number | null;
 	cribPoints: number | null;
+
+	player1HandEligibilityOverride: boolean | null;
+	player2HandEligibilityOverride: boolean | null;
+	cribEligibilityOverride: boolean | null;
+
 	isLastHand: boolean;
 }
 
@@ -283,6 +288,10 @@ export interface HandInput {
 	player1HandPoints: number | null;
 	player2HandPoints: number | null;
 	cribPoints: number | null;
+
+	player1HandEligibilityOverride?: boolean | null;
+	player2HandEligibilityOverride?: boolean | null;
+	cribEligibilityOverride?: boolean | null;
 }
 
 export class CribbageDatabase {
@@ -601,7 +610,10 @@ export class CribbageDatabase {
                 hand_number,
                 player_1_hand_points,
                 player_2_hand_points,
-                crib_points
+                crib_points,
+                player_1_hand_eligibility_override,
+                player_2_hand_eligibility_override,
+                crib_eligibility_override
             FROM hands
             WHERE game_id = ?
             ORDER BY hand_number ASC;
@@ -632,6 +644,21 @@ export class CribbageDatabase {
 				player2HandPoints: typeof row[4] === 'number' ? row[4] : null,
 
 				cribPoints: typeof row[5] === 'number' ? row[5] : null,
+
+				player1HandEligibilityOverride:
+					row[6] === null
+						? null
+						: row[6] === 1,
+
+				player2HandEligibilityOverride:
+					row[7] === null
+						? null
+						: row[7] === 1,
+
+				cribEligibilityOverride:
+					row[8] === null
+						? null
+						: row[8] === 1,
 
 				isLastHand: handNumber === lastHandNumber,
 			};
@@ -685,9 +712,12 @@ export class CribbageDatabase {
                     hand_number,
                     player_1_hand_points,
                     player_2_hand_points,
-                    crib_points
+					crib_points,
+					player_1_hand_eligibility_override,
+					player_2_hand_eligibility_override,
+					crib_eligibility_override
                 )
-                VALUES (?, ?, ?, ?, ?, ?);
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
                 `,
 				[
 					id,
@@ -696,6 +726,26 @@ export class CribbageDatabase {
 					input.player1HandPoints,
 					input.player2HandPoints,
 					input.cribPoints,
+					input.player1HandEligibilityOverride === null ||
+					input.player1HandEligibilityOverride === undefined
+						? null
+						: input.player1HandEligibilityOverride
+							? 1
+							: 0,
+
+					input.player2HandEligibilityOverride === null ||
+					input.player2HandEligibilityOverride === undefined
+						? null
+						: input.player2HandEligibilityOverride
+							? 1
+							: 0,
+
+					input.cribEligibilityOverride === null ||
+					input.cribEligibilityOverride === undefined
+						? null
+						: input.cribEligibilityOverride
+							? 1
+							: 0,
 				],
 			);
 
@@ -717,35 +767,90 @@ export class CribbageDatabase {
 
 		const result = db.exec(
 			`
-            SELECT game_id
-            FROM hands
-            WHERE id = ?;
-            `,
+			SELECT
+				game_id,
+				player_1_hand_eligibility_override,
+				player_2_hand_eligibility_override,
+				crib_eligibility_override
+			FROM hands
+			WHERE id = ?;
+			`,
 			[id],
 		);
 
-		const gameId = result[0]?.values[0]?.[0];
+		const row = result[0]?.values[0];
 
-		if (typeof gameId !== 'string') {
+		if (!row) {
 			throw new Error('Hand not found.');
 		}
+
+		const gameId = String(row[0]);
+
+		const existingPlayer1Override =
+			row[1] === null ? null : row[1] === 1;
+
+		const existingPlayer2Override =
+			row[2] === null ? null : row[2] === 1;
+
+		const existingCribOverride =
+			row[3] === null ? null : row[3] === 1;
 
 		db.run('BEGIN;');
 
 		try {
 			db.run(
 				`
-                UPDATE hands
-                SET
-                    player_1_hand_points = ?,
-                    player_2_hand_points = ?,
-                    crib_points = ?
-                WHERE id = ?;
-                `,
+				UPDATE hands
+				SET
+					player_1_hand_points = ?,
+					player_2_hand_points = ?,
+					crib_points = ?,
+					player_1_hand_eligibility_override = ?,
+					player_2_hand_eligibility_override = ?,
+					crib_eligibility_override = ?
+				WHERE id = ?;
+				`,
 				[
 					input.player1HandPoints,
 					input.player2HandPoints,
 					input.cribPoints,
+
+					input.player1HandEligibilityOverride === undefined
+						? existingPlayer1Override === null
+							? null
+							: existingPlayer1Override
+								? 1
+								: 0
+						: input.player1HandEligibilityOverride === null
+							? null
+							: input.player1HandEligibilityOverride
+								? 1
+								: 0,
+
+					input.player2HandEligibilityOverride === undefined
+						? existingPlayer2Override === null
+							? null
+							: existingPlayer2Override
+								? 1
+								: 0
+						: input.player2HandEligibilityOverride === null
+							? null
+							: input.player2HandEligibilityOverride
+								? 1
+								: 0,
+
+					input.cribEligibilityOverride === undefined
+						? existingCribOverride === null
+							? null
+							: existingCribOverride
+								? 1
+								: 0
+						: input.cribEligibilityOverride === null
+							? null
+							: input.cribEligibilityOverride
+								? 1
+								: 0,
+
 					id,
 				],
 			);
@@ -1742,6 +1847,189 @@ export class CribbageDatabase {
 		}
 	}
 
+	public getEffectiveHandEligibility(hand: HandRecord): {
+		player1HandEligible: boolean;
+		player2HandEligible: boolean;
+		cribEligible: boolean;
+	} {
+		const db = this.requireDb();
+
+		const gameResult = db.exec(
+			`
+			SELECT first_dealer
+			FROM games
+			WHERE id = ?;
+			`,
+			[hand.gameId],
+		);
+
+		const firstDealerValue =
+			gameResult[0]?.values[0]?.[0];
+
+		const firstDealer: 1 | 2 | null =
+			firstDealerValue === 1
+				? 1
+				: firstDealerValue === 2
+					? 2
+					: null;
+
+		const lastHandResult = db.exec(
+			`
+			SELECT MAX(hand_number)
+			FROM hands
+			WHERE game_id = ?;
+			`,
+			[hand.gameId],
+		);
+
+		const lastHandNumber = Number(
+			lastHandResult[0]?.values[0]?.[0] ?? 0,
+		);
+
+		return this.getHandEligibility(
+			firstDealer,
+			hand.handNumber,
+			lastHandNumber,
+			hand.player1HandPoints,
+			hand.player2HandPoints,
+			hand.cribPoints,
+			hand.player1HandEligibilityOverride,
+			hand.player2HandEligibilityOverride,
+			hand.cribEligibilityOverride,
+		);
+	}
+
+	private getHandEligibility(
+		firstDealer: 1 | 2 | null,
+		handNumber: number,
+		lastHandNumber: number,
+		player1Points: number | null,
+		player2Points: number | null,
+		cribPoints: number | null,
+		player1Override: boolean | null,
+		player2Override: boolean | null,
+		cribOverride: boolean | null,
+	): {
+		player1HandEligible: boolean;
+		player2HandEligible: boolean;
+		cribEligible: boolean;
+	} {
+		const isLastHand = handNumber === lastHandNumber;
+
+		let player1HandEligible = !isLastHand;
+		let player2HandEligible = !isLastHand;
+		let cribEligible = !isLastHand;
+
+		if (isLastHand && firstDealer !== null) {
+			const dealer = this.getDealerForHand(
+				firstDealer,
+				handNumber,
+			);
+
+			const dealerPoints =
+				dealer === 1
+					? player1Points
+					: player2Points;
+
+			if (cribPoints !== null && cribPoints > 0) {
+				player1HandEligible = true;
+				player2HandEligible = true;
+			} else if (
+				dealerPoints !== null &&
+				dealerPoints > 0
+			) {
+				const pone = dealer === 1 ? 2 : 1;
+
+				if (pone === 1) {
+					player1HandEligible = true;
+				} else {
+					player2HandEligible = true;
+				}
+			}
+
+			cribEligible = false;
+		}
+
+		if (isLastHand) {
+			if (player1Override !== null) {
+				player1HandEligible = player1Override;
+			}
+
+			if (player2Override !== null) {
+				player2HandEligible = player2Override;
+			}
+
+			if (cribOverride !== null) {
+				cribEligible = cribOverride;
+			}
+		}
+
+		return {
+			player1HandEligible,
+			player2HandEligible,
+			cribEligible,
+		};
+	}
+
+	public async updateHandEligibilityOverrides(
+		id: string,
+		player1HandEligibilityOverride: boolean | null,
+		player2HandEligibilityOverride: boolean | null,
+		cribEligibilityOverride: boolean | null,
+	): Promise<void> {
+		const db = this.requireDb();
+
+		const result = db.exec(
+			`
+			SELECT game_id
+			FROM hands
+			WHERE id = ?;
+			`,
+			[id],
+		);
+
+		const row = result[0]?.values[0];
+
+		if (!row) {
+			throw new Error('Hand not found.');
+		}
+
+		const gameId = String(row[0]);
+
+		db.run(
+			`
+			UPDATE hands
+			SET
+				player_1_hand_eligibility_override = ?,
+				player_2_hand_eligibility_override = ?,
+				crib_eligibility_override = ?
+			WHERE id = ?;
+			`,
+			[
+				player1HandEligibilityOverride === null
+					? null
+					: player1HandEligibilityOverride
+						? 1
+						: 0,
+				player2HandEligibilityOverride === null
+					? null
+					: player2HandEligibilityOverride
+						? 1
+						: 0,
+				cribEligibilityOverride === null
+					? null
+					: cribEligibilityOverride
+						? 1
+						: 0,
+				id,
+			],
+		);
+
+		this.recalculateGameAggregates(gameId);
+
+		await this.save();
+	}
+
 	private recalculateGameAggregates(gameId: string): void {
 		const db = this.requireDb();
 
@@ -1778,7 +2066,10 @@ export class CribbageDatabase {
                 hand_number,
                 player_1_hand_points,
                 player_2_hand_points,
-                crib_points
+                crib_points,
+                player_1_hand_eligibility_override,
+                player_2_hand_eligibility_override,
+                crib_eligibility_override
             FROM hands
             WHERE game_id = ?
             ORDER BY hand_number ASC;
@@ -1862,51 +2153,30 @@ export class CribbageDatabase {
 
 			const cribPoints = typeof row[3] === 'number' ? row[3] : null;
 
-			const isLastHand = handNumber === lastHandNumber;
+			const player1Override =
+				row[4] === null ? null : row[4] === 1;
 
-			let player1HandIsEligible = !isLastHand;
-			let player2HandIsEligible = !isLastHand;
-			let cribIsEligible = !isLastHand;
+			const player2Override =
+				row[5] === null ? null : row[5] === 1;
 
-			if (isLastHand && firstDealer !== null) {
-				const dealer = this.getDealerForHand(firstDealer, handNumber);
+			const cribOverride =
+				row[6] === null ? null : row[6] === 1;
 
-				const dealerPoints =
-					dealer === 1 ? player1Points : player2Points;
-
-				/*
-				* Cribbage counting order:
-				*
-				* 1. Pone counts their hand.
-				* 2. Dealer counts their hand.
-				* 3. Dealer counts the crib.
-				*
-				* On the final hand we cannot know whether a
-				* hand was fully counted from its own score alone.
-				* However, if the dealer has points, we know the
-				* pone must have finished counting. If the crib
-				* has points, we know both hands must have finished
-				* counting.
-				*/
-				if (cribPoints !== null && cribPoints > 0) {
-					player1HandIsEligible = true;
-					player2HandIsEligible = true;
-				} else if (dealerPoints !== null && dealerPoints > 0) {
-					const pone = dealer === 1 ? 2 : 1;
-
-					if (pone === 1) {
-						player1HandIsEligible = true;
-					} else {
-						player2HandIsEligible = true;
-					}
-				}
-
-				/*
-				* The final crib is never eligible because its points
-				* may themselves represent an incomplete count.
-				*/
-				cribIsEligible = false;
-			}
+			const {
+				player1HandEligible: player1HandIsEligible,
+				player2HandEligible: player2HandIsEligible,
+				cribEligible: cribIsEligible,
+			} = this.getHandEligibility(
+				firstDealer,
+				handNumber,
+				lastHandNumber,
+				player1Points,
+				player2Points,
+				cribPoints,
+				player1Override,
+				player2Override,
+				cribOverride,
+			);
 
 			if (player1Points !== null) {
 				player1HandTotal += player1Points;
@@ -2348,6 +2618,47 @@ export class CribbageDatabase {
 				db.run('COMMIT;');
 
 				version = 4;
+			} catch (error) {
+				db.run('ROLLBACK;');
+				throw error;
+			}
+		}
+
+		if (version < 5) {
+			db.run('BEGIN;');
+
+			try {
+				db.run(`
+                    ALTER TABLE hands
+                    ADD COLUMN player_1_hand_eligibility_override INTEGER
+                        CHECK (
+                            player_1_hand_eligibility_override IS NULL
+                            OR player_1_hand_eligibility_override IN (0, 1)
+                        );
+                `);
+
+				db.run(`
+                    ALTER TABLE hands
+                    ADD COLUMN player_2_hand_eligibility_override INTEGER
+                        CHECK (
+                            player_2_hand_eligibility_override IS NULL
+                            OR player_2_hand_eligibility_override IN (0, 1)
+                        );
+                `);
+
+				db.run(`
+                    ALTER TABLE hands
+                    ADD COLUMN crib_eligibility_override INTEGER
+                        CHECK (
+                            crib_eligibility_override IS NULL
+                            OR crib_eligibility_override IN (0, 1)
+                        );
+                `);
+
+				db.run('PRAGMA user_version = 5;');
+				db.run('COMMIT;');
+
+				version = 5;
 			} catch (error) {
 				db.run('ROLLBACK;');
 				throw error;

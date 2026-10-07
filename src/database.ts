@@ -2254,6 +2254,11 @@ export class CribbageDatabase {
 
 					player1CribCount++;
 
+					player1HighHand =
+						player1HighHand === null
+							? cribPoints
+							: Math.max(player1HighHand, cribPoints);
+
 					if (cribIsEligible) {
 						player1CribEligible += cribPoints;
 
@@ -2263,6 +2268,11 @@ export class CribbageDatabase {
 					player2CribTotal += cribPoints;
 
 					player2CribCount++;
+
+					player2HighHand =
+						player2HighHand === null
+							? cribPoints
+							: Math.max(player2HighHand, cribPoints);
 
 					if (cribIsEligible) {
 						player2CribEligible += cribPoints;

@@ -1211,7 +1211,7 @@ function renderSituational(
 
 	renderLeaderboardCard(
 		grid,
-		'Higher High-Hand %',
+		'Higher High Hand/Crib %',
 		players
 			.filter(
 				(player) =>
@@ -1354,7 +1354,7 @@ function renderRecords(
 
 	renderGroupedRecordCard(
 		grid,
-		'Highest Hands',
+		'Highest Hands/Cribs',
 		buildHighestHandOccurrences(
 			games,
 			hands,
@@ -1364,7 +1364,7 @@ function renderRecords(
 
 	renderGroupedRecordCard(
 		grid,
-		'Highest High Hand in a Loss',
+		'Highest High Hand/Crib in a Loss',
 		buildHighHandLossOccurrences(
 			games,
 		),
@@ -1373,7 +1373,7 @@ function renderRecords(
 
 	renderGroupedRecordCard(
 		grid,
-		'Lowest High Hand in a Win',
+		'Lowest High Hand/Crib in a Win',
 		buildLowHighHandWinOccurrences(
 			games,
 		),
@@ -2830,19 +2830,10 @@ function buildHighestHandOccurrences(
 			for (
 				const hand of gameHands
 			) {
-				const {
-					player1HandEligible,
-					player2HandEligible,
-				} =
-					getEffectiveHandEligibility(
-						hand,
-					);
 
 				if (
-					player1HandEligible &&
-					typeof hand
-						.player1HandPoints ===
-						'number'
+					typeof hand.player1HandPoints ===
+					'number'
 				) {
 					addRecordOccurrence(
 						occurrences,
@@ -2859,10 +2850,8 @@ function buildHighestHandOccurrences(
 				}
 
 				if (
-					player2HandEligible &&
-					typeof hand
-						.player2HandPoints ===
-						'number'
+					typeof hand.player2HandPoints ===
+					'number'
 				) {
 					addRecordOccurrence(
 						occurrences,
@@ -2873,6 +2862,35 @@ function buildHighestHandOccurrences(
 						hand.player2,
 						hand.player1,
 
+						hand.playedDate,
+						hand.playedTime,
+					);
+				}
+
+				/*
+				 * The crib belongs to the dealer.
+				 * Include it regardless of eligibility.
+				 */
+				if (
+					typeof hand.cribPoints ===
+						'number' &&
+					hand.firstDealer !== null
+				) {
+					const dealer =
+						getHandDealer(
+							hand.firstDealer,
+							hand.handNumber,
+						);
+
+					addRecordOccurrence(
+						occurrences,
+						hand.cribPoints,
+						dealer === 1
+							? hand.player1
+							: hand.player2,
+						dealer === 1
+							? hand.player2
+							: hand.player1,
 						hand.playedDate,
 						hand.playedTime,
 					);

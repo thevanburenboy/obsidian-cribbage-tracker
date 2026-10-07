@@ -426,7 +426,7 @@ function renderGlobalStats(
 				context.longestLossStreak,
 		},
 		{
-			label: 'High hand',
+			label: 'High hand/crib',
 			value: formatValueWithCount(
 				globalHighHand.value,
 				globalHighHand.count,
@@ -434,7 +434,7 @@ function renderGlobalStats(
 			subtext: context.highHand,
 		},
 		{
-			label: 'Highest high-hand in loss',
+			label: 'Highest high hand/crib in loss',
 			value: formatValueWithCount(
 				highHandExtremes.highestHighHandInLoss,
 				highHandExtremes.highestHighHandInLossCount,
@@ -442,7 +442,7 @@ function renderGlobalStats(
 			subtext: context.highestHighHandInLoss,
 		},
 		{
-			label: 'Lowest high-hand in win',
+			label: 'Lowest high hand/crib in win',
 			value: formatValueWithCount(
 				highHandExtremes.lowestHighHandInWin,
 				highHandExtremes.lowestHighHandInWinCount,
@@ -622,7 +622,7 @@ function renderGlobalStats(
 
 	renderHighHandWinTable(
 		container,
-		'Winning % by High Hand',
+		'Winning % by High Hand/Crib',
 		buildHighHandWinObservations(games, null, null),
 	);
 
@@ -669,7 +669,7 @@ function renderPlayerStats(
 
 	renderHighHandWinTable(
 		container,
-		`${player} — Winning % by High Hand`,
+		`${player} — Winning % by High Hand/Crib`,
 		buildHighHandWinObservations(games, player, null),
 	);
 
@@ -828,12 +828,12 @@ function renderMatchupStats(
 			stats2.longestLossStreak > 0 ? `L${stats2.longestLossStreak}` : '—',
 		],
 		[
-			'High hand',
+			'High hand/crib',
 			stats1.highHand === null ? '—' : String(stats1.highHand),
 			stats2.highHand === null ? '—' : String(stats2.highHand),
 		],
 		[
-			'Higher high hand %',
+			'Higher high hand/crib %',
 			formatShare(
 				stats1.higherHighHandCount,
 				stats1.higherHighHandCount +
@@ -848,7 +848,7 @@ function renderMatchupStats(
 			),
 		],
 		[
-			'High-hand tie %',
+			'High hand/crib tie %',
 			formatShare(
 				stats1.tiedHighHandCount,
 				stats1.higherHighHandCount +
@@ -863,7 +863,7 @@ function renderMatchupStats(
 			),
 		],
 		[
-			'Lower high hand %',
+			'Lower high hand/crib %',
 			formatShare(
 				stats1.lowerHighHandCount,
 				stats1.higherHighHandCount +
@@ -878,7 +878,7 @@ function renderMatchupStats(
 			),
 		],
 		[
-			'Highest high-hand in loss',
+			'Highest high hand/crib in loss',
 			formatValueWithCount(
 				stats1.highestHighHandInLoss,
 				stats1.highestHighHandInLossCount,
@@ -889,7 +889,7 @@ function renderMatchupStats(
 			),
 		],
 		[
-			'Lowest high-hand in win',
+			'Lowest high hand/crib in win',
 			formatValueWithCount(
 				stats1.lowestHighHandInWin,
 				stats1.lowestHighHandInWinCount,
@@ -1049,15 +1049,15 @@ function renderMatchupStats(
 			[context1.longestLossStreak, context2.longestLossStreak],
 		],
 
-		['High hand', [context1.highHand, context2.highHand]],
+		['High hand/crib', [context1.highHand, context2.highHand]],
 
 		[
-			'Highest high-hand in loss',
+			'Highest high hand/crib in loss',
 			[context1.highestHighHandInLoss, context2.highestHighHandInLoss],
 		],
 
 		[
-			'Lowest high-hand in win',
+			'Lowest high hand/crib in win',
 			[context1.lowestHighHandInWin, context2.lowestHighHandInWin],
 		],
 		[
@@ -1197,7 +1197,7 @@ function renderMatchupStats(
 
 	renderHighHandWinTable(
 		container,
-		`${player1} vs ${player2} — Winning % by High Hand`,
+		`${player1} vs ${player2} — Winning % by High Hand/Crib`,
 		buildMatchupHighHandWinObservations(games, player1, player2),
 	);
 
@@ -2602,12 +2602,12 @@ function playerMetrics(
 			subtext: context.longestLossStreak,
 		},
 		{
-			label: 'High hand',
+			label: 'High hand/crib',
 			value: stats.highHand === null ? '—' : String(stats.highHand),
 			subtext: context.highHand,
 		},
 		{
-			label: 'Higher high hand',
+			label: 'Higher high hand/crib',
 			value: formatShare(
 				stats.higherHighHandCount,
 				stats.higherHighHandCount +
@@ -2616,7 +2616,7 @@ function playerMetrics(
 			),
 		},
 		{
-			label: 'High-hand tie',
+			label: 'High hand/crib tie',
 			value: formatShare(
 				stats.tiedHighHandCount,
 				stats.higherHighHandCount +
@@ -2625,7 +2625,7 @@ function playerMetrics(
 			),
 		},
 		{
-			label: 'Lower high hand',
+			label: 'Lower high hand/crib',
 			value: formatShare(
 				stats.lowerHighHandCount,
 				stats.higherHighHandCount +
@@ -2634,7 +2634,7 @@ function playerMetrics(
 			),
 		},
 		{
-			label: 'Highest high-hand in loss',
+			label: 'Highest high hand/crib in loss',
 			value: formatValueWithCount(
 				stats.highestHighHandInLoss,
 				stats.highestHighHandInLossCount,
@@ -2642,7 +2642,7 @@ function playerMetrics(
 			subtext: context.highestHighHandInLoss,
 		},
 		{
-			label: 'Lowest high-hand in win',
+			label: 'Lowest high hand/crib in win',
 			value: formatValueWithCount(
 				stats.lowestHighHandInWin,
 				stats.lowestHighHandInWinCount,

@@ -4,7 +4,7 @@ import type {
 	CustomMetricRecord,
 	GameStatisticsRecord,
 	HandStatisticsRecord,
-} from '../database';
+} from '../database/database';
 
 import {
 	evaluateBuilderMetric,

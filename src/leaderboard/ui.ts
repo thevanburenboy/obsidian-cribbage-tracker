@@ -1,6 +1,9 @@
 import type { CribbageTrackerPluginContext } from '../plugin-context';
 
-import type { GameStatisticsRecord, HandStatisticsRecord } from '../database';
+import type {
+	GameStatisticsRecord,
+	HandStatisticsRecord,
+} from '../database/database';
 
 import { buildPlayerAggregates } from './aggregates';
 

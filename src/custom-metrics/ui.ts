@@ -9,7 +9,7 @@ import type {
 	CustomMetricInput,
 	CustomMetricMatchupMode,
 	CustomMetricRecord,
-} from '../database';
+} from '../database/database';
 
 import {
 	evaluateBuilderMetric,

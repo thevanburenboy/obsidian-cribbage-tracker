@@ -1,4 +1,4 @@
-import type { GameStatisticsRecord } from '../database';
+import type { GameStatisticsRecord } from '../database/database';
 
 import type {
 	ContextRecordOccurrence,

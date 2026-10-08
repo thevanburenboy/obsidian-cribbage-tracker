@@ -1,4 +1,7 @@
-import type { GameStatisticsRecord, HandStatisticsRecord } from '../database';
+import type {
+	GameStatisticsRecord,
+	HandStatisticsRecord,
+} from '../database/database';
 
 import type {
 	GameLengthOccurrence,

@@ -26,14 +26,16 @@ It will display summary information about the game, score, and first dealer at t
 
 The Hands table at the bottom allows you to enter the score for Player 1, Player 2, and crib. The dealer is automatically determined by alternating the player, where Hand 1's dealer is the First Dealer denoted on the Games tab.
 
-**Important:** The last hand recorded for a game is automatically excluded from per hand statistics, as it is overwhelmingly likely that either one or both of the players will cross 121 without counting their full hand. **For accurate pegging stats, make sure to only count the effective points from the final hand. For example, if Player 1 counts first, has 8 points, but only needs 4 points to reach 121 and win, only enter 4, and then enter 0 for Player 2 and the crib as they did not count that round.** If the game ends during the pegging phase, enter the last hand as 0 for all 3 cells to avoid your penultimate hand not counting towards statistics.
+**Important:** The last round recorded automatically marks certain hands as ineligible from counting stats to make sure your average hand count isn't dragged down because you only needed 2 points to cross the finish line. If the crib has points in the final round, then both the pone and dealer hands are eligible while the crib is ineligible. If the dealer hand has points and crib is 0, only the pone is eligible. If only the pone has points, all 3 are ineligible. **You can override the eligibility for each hand in the final round with the checkboxes that appear.**
+
+**For accurate pegging stats, make sure to only count the effective points from the final hand. For example, if Player 1 counts first, has 8 points, but only needs 4 points to reach 121 and win, only enter 4, and then enter 0 for Player 2 and the crib as they did not count that round.** If the game ends during the pegging phase, enter the last hand as 0 for all 3 cells to avoid your penultimate hand not counting towards statistics.
 
 ## Statistics
 This tab includes statistical data for 3 scopes: Global, Player, and Matchup.
 
 **Global**
 
-This displays the total games across all matchups, the average margin of victory, first dealer record, first pone record, games that ended in a skunk (but not double skunk), games that ended in a double skunk, the longest win streak, the longest loss streak, the highest hand, the highest high-hand in a loss, the lowest high-hand in a win, global points per hand, global points per crib, global pegging per round, and completed hand logs. The three "points per" statistics are color coded based on "par" (retrieved from https://www.gamecolony.com/cribbage_hands.shtml), where those better than par are green and worse than par are red.
+This displays the total games across all matchups, the average margin of victory, first dealer record, first pone record, games that ended in a skunk (but not double skunk), games that ended in a double skunk, the longest win streak, the longest loss streak, the highest hand, the highest high-hand in a loss, the lowest high-hand in a win, highest average hand (in a game), lowest average hand, largest final-count deficit overcome, most final-count points in a win, most final-count points in a loss, largest single-round count, average game length (in hands), quickest game (in hands), longest game (in hands), global points per hand, global points per crib, global pegging per round, and completed hand logs. The three "points per" statistics are color coded based on "par" (retrieved from https://www.gamecolony.com/cribbage_hands.shtml), where those better than par are green and worse than par are red.
 
 There are also two tables beneath the statistic cards:
 - Winning % Distribution by High Hand: which shows the high hand, the win % with that exact hand, and the cumulative win % with that high hand or better.
@@ -41,7 +43,7 @@ There are also two tables beneath the statistic cards:
 
 **Player**
 
-This displays the same statistics as Global does, except filtered to just the selected player's results. There are also 3 additional cards: Higher High Hand, High-hand Tie, and Lower High Hand. These represent where your high hand in a game is relative to your opponent.
+This displays the same statistics as Global does, except filtered to just the selected player's results. There are also 3 additional cards: Higher High Hand %, High-hand Tie %, and Lower High Hand %. These represent where your high hand in a game is relative to your opponent.
 
 There are also the same two tables below the statistic cards, again filtered to just that player's games.
 
@@ -79,4 +81,6 @@ It will also display a Preview field of what the values/formatting is for what y
 - Database Path (default: Cribbage/cribbage.db): This is the vault-relative position where you want the .db file to be stored for your cribbage games.
 - Show CSV Importer (Yes/No): This allows you to enable/disable the dialog on the Games screen for importing games from a CSV file.
 - Par Benchmarks (Dealer hand/Pone hand/Crib/Dealer pegging/Pone pegging): This allows you to change the default "par" for the various scoring scenarios. On the assumption that each player is dealer 50% of the time, the par displayed in the Hands and Statistics screen is an average of the Dealer and Pone pars.
-- Minimum Requirements: This is for the minimum games/hands/etc threshold on the Leaderboard tab. By default, most leaderboard cards won't show players with less than 5 of the relevant scenario (games/hands/cribs).
+- Minimum Requirements: This is for the minimum games/hands/etc threshold on the Leaderboard tab. By default, most leaderboard cards won't show players with less than 5 of the relevant scenario (games/hands/cribs)
+- Reset All Settings: Resets all to the default
+- Recalculate Game Statistics: Recalculates the hand aggregates for all games. Useful if there was some type of bug fix/new feature related to hands that you want to be calculated for prior hand data.

@@ -1,6 +1,8 @@
 import { Notice } from 'obsidian';
 
-import type CribbageTrackerPlugin from './main';
+import type {
+	CribbageTrackerPluginContext,
+} from './plugin-context';
 
 import type {
 	CustomMetricCalculationMode,
@@ -29,7 +31,7 @@ import {
 
 export function renderCustomMetricsPage(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const pageContainer = container.createDiv('cribbage-custom-metrics-page');
 
@@ -46,7 +48,7 @@ class CustomMetricsPage {
 	constructor(
 		private container: HTMLElement,
 
-		private plugin: CribbageTrackerPlugin,
+		private plugin: CribbageTrackerPluginContext,
 	) {}
 
 	render(): void {

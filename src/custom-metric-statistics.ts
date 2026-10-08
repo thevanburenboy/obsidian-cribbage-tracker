@@ -1,5 +1,6 @@
-import type CribbageTrackerPlugin
-	from './main';
+import type {
+	CribbageTrackerPluginContext,
+} from './plugin-context';
 
 import type {
 	CustomMetricRecord,
@@ -35,7 +36,7 @@ export type CustomMetricStatisticsScope =
 
 export function renderCustomMetricStatistics(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	games: GameStatisticsRecord[],
 	scope: CustomMetricStatisticsScope,
 ): void {
@@ -87,7 +88,7 @@ export function renderCustomMetricStatistics(
 
 function renderMetric(
 	container: HTMLElement,
-    plugin: CribbageTrackerPlugin,
+    plugin: CribbageTrackerPluginContext,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
     hands: HandStatisticsRecord[],
@@ -138,7 +139,7 @@ function renderMetric(
 
 function renderSingleResult(
 	card: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
     hands: HandStatisticsRecord[],
@@ -220,7 +221,7 @@ function renderSingleResult(
 
 function renderPerPlayerMatchup(
 	card: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
     hands: HandStatisticsRecord[],
@@ -257,7 +258,7 @@ function renderPerPlayerMatchup(
 
 function renderPlayerResult(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	metric: CustomMetricRecord,
 	games: GameStatisticsRecord[],
     hands: HandStatisticsRecord[],
@@ -380,7 +381,7 @@ function toEvaluationScope(
 }
 
 function evaluateCustomMetric(
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	metric: CustomMetricRecord,
 
 	games: GameStatisticsRecord[],

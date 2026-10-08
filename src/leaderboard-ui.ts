@@ -1,5 +1,6 @@
-import type CribbageTrackerPlugin
-	from './main';
+import type {
+	CribbageTrackerPluginContext,
+} from './plugin-context';
 
 import type {
 	GameStatisticsRecord,
@@ -186,7 +187,7 @@ function formatRecordContributors(
 
 export function renderLeaderboardPage(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const games =
 		plugin.database
@@ -808,7 +809,7 @@ function renderOverallStandings(
 function renderGamePerformance(
 	container: HTMLElement,
 	players: PlayerAggregate[],
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const minGames =
 		plugin.settings
@@ -976,7 +977,7 @@ function renderGamePerformance(
 function renderHandPerformance(
 	container: HTMLElement,
 	players: PlayerAggregate[],
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const minHands =
 		plugin.settings
@@ -1115,7 +1116,7 @@ function renderHandPerformance(
 function renderSituational(
 	container: HTMLElement,
 	players: PlayerAggregate[],
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const minRoleGames =
 		plugin.settings

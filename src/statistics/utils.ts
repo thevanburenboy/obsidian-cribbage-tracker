@@ -1,15 +1,8 @@
-import type {
-	CribbageTrackerPluginContext,
-} from './plugin-context';
+import type { CribbageTrackerPluginContext } from '../plugin-context';
 
-import type {
-	GameStatisticsRecord,
-	HandStatisticsRecord,
-} from './database';
+import type { GameStatisticsRecord, HandStatisticsRecord } from '../database';
 
-import type {
-	Metric,
-} from './statistics-types';
+import type { Metric } from './types';
 
 export function getPlayerSide(
 	game: GameStatisticsRecord,
@@ -75,20 +68,11 @@ export function effectiveHighHand(
 	return game.player2HighHandCalculated;
 }
 
-export function getHandDealer(
-	firstDealer: 1 | 2,
-	handNumber: number,
-): 1 | 2 {
-	return handNumber % 2 === 1
-		? firstDealer
-		: firstDealer === 1
-			? 2
-			: 1;
+export function getHandDealer(firstDealer: 1 | 2, handNumber: number): 1 | 2 {
+	return handNumber % 2 === 1 ? firstDealer : firstDealer === 1 ? 2 : 1;
 }
 
-export function getEffectiveHandEligibility(
-	hand: HandStatisticsRecord,
-): {
+export function getEffectiveHandEligibility(hand: HandStatisticsRecord): {
 	player1HandEligible: boolean;
 	player2HandEligible: boolean;
 	cribEligible: boolean;
@@ -98,15 +82,10 @@ export function getEffectiveHandEligibility(
 	let cribEligible = !hand.isLastHand;
 
 	if (hand.isLastHand && hand.firstDealer !== null) {
-		const dealer = getHandDealer(
-			hand.firstDealer,
-			hand.handNumber,
-		);
+		const dealer = getHandDealer(hand.firstDealer, hand.handNumber);
 
 		const dealerPoints =
-			dealer === 1
-				? hand.player1HandPoints
-				: hand.player2HandPoints;
+			dealer === 1 ? hand.player1HandPoints : hand.player2HandPoints;
 
 		if (hand.cribPoints !== null && hand.cribPoints > 0) {
 			player1HandEligible = true;
@@ -279,7 +258,10 @@ export function formatShare(count: number, total: number): string {
 	return ((count / total) * 100).toFixed(1) + '%';
 }
 
-export function formatValueWithCount(value: number | null, count: number): string {
+export function formatValueWithCount(
+	value: number | null,
+	count: number,
+): string {
 	if (value === null) {
 		return '—';
 	}
@@ -352,13 +334,9 @@ export function formatScopedRecord(
 	}
 
 	const value =
-		decimals > 0
-			? record.value.toFixed(decimals)
-			: String(record.value);
+		decimals > 0 ? record.value.toFixed(decimals) : String(record.value);
 
-	return record.count > 1
-		? `${value} (x${record.count})`
-		: value;
+	return record.count > 1 ? `${value} (x${record.count})` : value;
 }
 
 export function formatStreakWithCount(
@@ -382,5 +360,7 @@ export function getPluginHandPar(plugin: CribbageTrackerPluginContext): number {
 export function getPluginPeggingPar(
 	plugin: CribbageTrackerPluginContext,
 ): number {
-	return (plugin.settings.dealerPeggingPar + plugin.settings.ponePeggingPar) / 2;
+	return (
+		(plugin.settings.dealerPeggingPar + plugin.settings.ponePeggingPar) / 2
+	);
 }

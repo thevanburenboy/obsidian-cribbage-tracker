@@ -1,18 +1,13 @@
-import type {
-	CribbageTrackerPluginContext,
-} from './plugin-context';
+import type { CribbageTrackerPluginContext } from '../plugin-context';
 
-import type {
-	GameStatisticsRecord,
-	HandStatisticsRecord,
-} from './database';
+import type { GameStatisticsRecord, HandStatisticsRecord } from '../database';
 
 import type {
 	Metric,
 	ScopedExtraStats,
 	StatisticContext,
 	PlayerStats,
-} from './statistics-types';
+} from './types';
 
 import {
 	calculateGlobalExtras,
@@ -20,19 +15,19 @@ import {
 	calculateGlobalHighHandExtremes,
 	calculatePlayerStats,
 	calculateScopedExtraStats,
-} from './statistics-stats';
+} from './stats';
 
 import {
 	calculateGlobalStreakSummary,
 	calculateStatisticContext,
-} from './statistics-context';
+} from './context';
 
 import {
 	buildHighHandWinObservations,
 	buildMatchupHighHandWinObservations,
 	renderHighHandWinTable,
 	renderMarginDistributionTable,
-} from './statistics-tables';
+} from './tables';
 
 import {
 	formatCountRate,
@@ -50,11 +45,9 @@ import {
 	getPluginPeggingPar,
 	hasCompletedScore,
 	renderMetricGrid,
-} from './statistics-utils';
+} from './utils';
 
-import {
-	renderCustomMetricStatistics,
-} from './custom-metric-statistics';
+import { renderCustomMetricStatistics } from '../custom-metrics/statistics';
 
 export function renderGlobalStats(
 	container: HTMLElement,
@@ -73,7 +66,9 @@ export function renderGlobalStats(
 
 	const totalEligibleHandPoints = completeHands.reduce(
 		(total, game) =>
-			total + game.player1HandPointsEligible + game.player2HandPointsEligible,
+			total +
+			game.player1HandPointsEligible +
+			game.player2HandPointsEligible,
 		0,
 	);
 
@@ -84,19 +79,25 @@ export function renderGlobalStats(
 
 	const totalCribPoints = completeHands.reduce(
 		(total, game) =>
-			total + game.player1CribPointsEligible + game.player2CribPointsEligible,
+			total +
+			game.player1CribPointsEligible +
+			game.player2CribPointsEligible,
 		0,
 	);
 
 	const totalCribs = completeHands.reduce(
 		(total, game) =>
-			total + game.player1EligibleCribCount + game.player2EligibleCribCount,
+			total +
+			game.player1EligibleCribCount +
+			game.player2EligibleCribCount,
 		0,
 	);
 
 	const totalPegging = completeHands.reduce(
 		(total, game) =>
-			total + game.player1PeggingPointsTotal + game.player2PeggingPointsTotal,
+			total +
+			game.player1PeggingPointsTotal +
+			game.player2PeggingPointsTotal,
 		0,
 	);
 
@@ -106,7 +107,9 @@ export function renderGlobalStats(
 	);
 
 	const globalPointsPerHand =
-		totalEligibleHands > 0 ? totalEligibleHandPoints / totalEligibleHands : null;
+		totalEligibleHands > 0
+			? totalEligibleHandPoints / totalEligibleHands
+			: null;
 
 	const globalPointsPerCrib =
 		totalCribs > 0 ? totalCribPoints / totalCribs : null;
@@ -139,7 +142,10 @@ export function renderGlobalStats(
 		},
 		{
 			label: 'First dealer record',
-			value: formatRecord(globalExtras.dealerWins, globalExtras.dealerLosses),
+			value: formatRecord(
+				globalExtras.dealerWins,
+				globalExtras.dealerLosses,
+			),
 		},
 		{
 			label: 'Pone-first record',
@@ -152,7 +158,10 @@ export function renderGlobalStats(
 		},
 		{
 			label: 'Double-skunk games',
-			value: formatCountRate(globalExtras.doubleSkunkGames, completed.length),
+			value: formatCountRate(
+				globalExtras.doubleSkunkGames,
+				completed.length,
+			),
 			subtext: context.globalDoubleSkunkGame,
 		},
 		{
@@ -175,7 +184,10 @@ export function renderGlobalStats(
 		},
 		{
 			label: 'High hand/crib',
-			value: formatValueWithCount(globalHighHand.value, globalHighHand.count),
+			value: formatValueWithCount(
+				globalHighHand.value,
+				globalHighHand.count,
+			),
 			subtext: context.highHand,
 		},
 		{
@@ -250,7 +262,10 @@ export function renderGlobalStats(
 		{
 			label: 'Points / crib',
 			value: formatNumber(globalPointsPerCrib),
-			valueClass: getParClass(globalPointsPerCrib, plugin.settings.cribPar),
+			valueClass: getParClass(
+				globalPointsPerCrib,
+				plugin.settings.cribPar,
+			),
 			subtext: `Par ${plugin.settings.cribPar.toFixed(2)}`,
 		},
 		{
@@ -379,7 +394,11 @@ export function renderMatchupStats(
 		['Games', String(stats1.games), String(stats2.games)],
 		['Wins', String(stats1.wins), String(stats2.wins)],
 		['Losses', String(stats1.losses), String(stats2.losses)],
-		['Win %', formatPercent(stats1.winPercent), formatPercent(stats2.winPercent)],
+		[
+			'Win %',
+			formatPercent(stats1.winPercent),
+			formatPercent(stats2.winPercent),
+		],
 		['PPG', formatNumber(stats1.ppg), formatNumber(stats2.ppg)],
 		[
 			'Avg score differential',
@@ -594,11 +613,17 @@ export function renderMatchupStats(
 		],
 		[
 			'Highest average hand',
-			[extra1.highestAverageHand.subtext, extra2.highestAverageHand.subtext],
+			[
+				extra1.highestAverageHand.subtext,
+				extra2.highestAverageHand.subtext,
+			],
 		],
 		[
 			'Lowest average hand',
-			[extra1.lowestAverageHand.subtext, extra2.lowestAverageHand.subtext],
+			[
+				extra1.lowestAverageHand.subtext,
+				extra2.lowestAverageHand.subtext,
+			],
 		],
 		[
 			'Largest final-count deficit overcome',
@@ -638,8 +663,14 @@ export function renderMatchupStats(
 		],
 		['Skunk wins', [context1.skunkWin, context2.skunkWin]],
 		['Skunk losses', [context1.skunkLoss, context2.skunkLoss]],
-		['Double-skunk wins', [context1.doubleSkunkWin, context2.doubleSkunkWin]],
-		['Double-skunk losses', [context1.doubleSkunkLoss, context2.doubleSkunkLoss]],
+		[
+			'Double-skunk wins',
+			[context1.doubleSkunkWin, context2.doubleSkunkWin],
+		],
+		[
+			'Double-skunk losses',
+			[context1.doubleSkunkLoss, context2.doubleSkunkLoss],
+		],
 	]);
 
 	renderCustomMetricStatistics(container, plugin, games, {
@@ -687,7 +718,9 @@ export function renderMatchupStats(
 			if (label.startsWith('Points / hand')) {
 				value.addClass(
 					getParClass(
-						index === 1 ? stats1.pointsPerHand : stats2.pointsPerHand,
+						index === 1
+							? stats1.pointsPerHand
+							: stats2.pointsPerHand,
 						handPar,
 					) ?? '',
 				);
@@ -696,7 +729,9 @@ export function renderMatchupStats(
 			if (label.startsWith('Points / crib')) {
 				value.addClass(
 					getParClass(
-						index === 1 ? stats1.pointsPerCrib : stats2.pointsPerCrib,
+						index === 1
+							? stats1.pointsPerCrib
+							: stats2.pointsPerCrib,
 						plugin.settings.cribPar,
 					) ?? '',
 				);
@@ -705,7 +740,9 @@ export function renderMatchupStats(
 			if (label.startsWith('Pegging / round')) {
 				value.addClass(
 					getParClass(
-						index === 1 ? stats1.peggingPerRound : stats2.peggingPerRound,
+						index === 1
+							? stats1.peggingPerRound
+							: stats2.peggingPerRound,
 						peggingPar,
 					) ?? '',
 				);
@@ -782,17 +819,24 @@ export function playerMetrics(
 		},
 		{
 			label: 'Current streak',
-			value: formatStreak(stats.currentStreakType, stats.currentStreakCount),
+			value: formatStreak(
+				stats.currentStreakType,
+				stats.currentStreakCount,
+			),
 			subtext: context.currentStreak,
 		},
 		{
 			label: 'Longest win streak',
-			value: stats.longestWinStreak > 0 ? `W${stats.longestWinStreak}` : '—',
+			value:
+				stats.longestWinStreak > 0 ? `W${stats.longestWinStreak}` : '—',
 			subtext: context.longestWinStreak,
 		},
 		{
 			label: 'Longest loss streak',
-			value: stats.longestLossStreak > 0 ? `L${stats.longestLossStreak}` : '—',
+			value:
+				stats.longestLossStreak > 0
+					? `L${stats.longestLossStreak}`
+					: '—',
 			subtext: context.longestLossStreak,
 		},
 		{
@@ -899,7 +943,10 @@ export function playerMetrics(
 		{
 			label: 'Points / crib',
 			value: formatNumber(stats.pointsPerCrib),
-			valueClass: getParClass(stats.pointsPerCrib, plugin.settings.cribPar),
+			valueClass: getParClass(
+				stats.pointsPerCrib,
+				plugin.settings.cribPar,
+			),
 			subtext: `Par ${plugin.settings.cribPar.toFixed(2)}`,
 		},
 		{

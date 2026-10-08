@@ -1,6 +1,9 @@
 import { Notice } from 'obsidian';
 
-import type CribbageTrackerPlugin from './main';
+import type {
+	CribbageTrackerPluginContext,
+} from './plugin-context';
+
 import type { GameInput } from './database';
 
 import {
@@ -20,7 +23,7 @@ interface ImportBuildResult {
 
 export function renderCsvImporter(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	onImported: () => void,
 ): void {
 	const panel = container.createEl('details', {
@@ -143,7 +146,7 @@ function renderConfiguration(
 	container: HTMLElement,
 	previewContainer: HTMLElement,
 	data: CsvData,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	onImported: () => void,
 ): void {
 	container.empty();
@@ -318,7 +321,7 @@ interface ImportControls {
 function renderPreview(
 	container: HTMLElement,
 	data: CsvData,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	onImported: () => void,
 	controls: ImportControls,
 ): void {

@@ -1,4 +1,6 @@
-import type CribbageTrackerPlugin from './main';
+import type {
+	CribbageTrackerPluginContext,
+} from './plugin-context';
 
 import type {
 	GameStatisticsRecord,
@@ -166,7 +168,7 @@ interface PlayerStats {
 
 export function renderStatisticsPage(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const games =
 		plugin.database.listGamesForStatistics();
@@ -277,7 +279,7 @@ function renderGlobalStats(
 	container: HTMLElement,
 	games: GameStatisticsRecord[],
 	hands: HandStatisticsRecord[],
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const handPar =
 		(plugin.settings.dealerHandPar + plugin.settings.poneHandPar) / 2;
@@ -634,7 +636,7 @@ function renderPlayerStats(
 	games: GameStatisticsRecord[],
 	hands: HandStatisticsRecord[],
 	player: string,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	container.createEl('h3', {
 		text: player,
@@ -686,7 +688,7 @@ function renderMatchupStats(
 	hands: HandStatisticsRecord[],
 	player1: string,
 	player2: string,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 ): void {
 	const handPar =
 		(plugin.settings.dealerHandPar + plugin.settings.poneHandPar) / 2;
@@ -2479,7 +2481,7 @@ function calculatePlayerStats(
 
 function playerMetrics(
 	stats: PlayerStats,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	context: StatisticContext,
 	extraStats: ScopedExtraStats,
 ): Metric[] {

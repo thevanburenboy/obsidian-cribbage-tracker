@@ -1,7 +1,9 @@
 import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
 import sqlWasmBinary from 'sql.js/dist/sql-wasm.wasm';
 import { normalizePath } from 'obsidian';
-import type CribbageTrackerPlugin from './main';
+import type {
+	CribbageTrackerPluginContext,
+} from './plugin-context';
 
 const CURRENT_SCHEMA_VERSION = 6;
 
@@ -305,7 +307,7 @@ export class CribbageDatabase {
 	private sql: SqlJsStatic | null = null;
 	private db: Database | null = null;
 
-	constructor(private plugin: CribbageTrackerPlugin) {}
+	constructor(private plugin: CribbageTrackerPluginContext) {}
 
 	async load(): Promise<void> {
 		if (this.db) {

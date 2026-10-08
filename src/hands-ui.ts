@@ -1,6 +1,8 @@
 import { Notice } from 'obsidian';
 
-import type CribbageTrackerPlugin from './main';
+import type {
+	CribbageTrackerPluginContext,
+} from './plugin-context';
 import type {
 	GameRecord,
 	HandInput,
@@ -13,7 +15,7 @@ import {
 
 export function renderHandsPage(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	selectedGameId: string | null,
 	onSelectGame: (gameId: string) => void,
 	onRefresh: () => void,
@@ -166,7 +168,7 @@ function renderGameHeader(
 
 function renderTrackingSettings(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	game: GameRecord,
 	onRefresh: () => void,
 ): void {
@@ -456,7 +458,7 @@ function renderTrackingSettings(
 
 function renderHands(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	game: GameRecord,
 	onRefresh: () => void,
 ): void {
@@ -548,7 +550,7 @@ function renderHands(
 
 function renderHandRow(
 	body: HTMLTableSectionElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	game: GameRecord,
 	hand: HandRecord,
 	onRefresh: () => void,
@@ -913,7 +915,7 @@ function getNextDealer(
 
 function renderAddHand(
 	container: HTMLElement,
-	plugin: CribbageTrackerPlugin,
+	plugin: CribbageTrackerPluginContext,
 	game: GameRecord,
 	hands: HandRecord[],
 	onRefresh: () => void,

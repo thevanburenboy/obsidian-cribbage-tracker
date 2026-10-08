@@ -1,8 +1,6 @@
 import { Plugin } from 'obsidian';
 
-import {
-	CribbageDatabase,
-} from './database';
+import { CribbageDatabase } from './database/database';
 
 import {
 	DEFAULT_SETTINGS,
@@ -10,10 +8,7 @@ import {
 	CribbageTrackerSettingTab,
 } from './settings';
 
-import {
-	CribbageTrackerView,
-	VIEW_TYPE_CRIBBAGE,
-} from './cribbage-view';
+import { CribbageTrackerView, VIEW_TYPE_CRIBBAGE } from './cribbage-view';
 
 export default class CribbageTrackerPlugin extends Plugin {
 	settings!: CribbageTrackerSettings;
@@ -23,27 +18,18 @@ export default class CribbageTrackerPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.database =
-			new CribbageDatabase(this);
+		this.database = new CribbageDatabase(this);
 
 		await this.database.load();
 
 		this.registerView(
 			VIEW_TYPE_CRIBBAGE,
-			(leaf) =>
-				new CribbageTrackerView(
-					leaf,
-					this,
-				),
+			(leaf) => new CribbageTrackerView(leaf, this),
 		);
 
-		this.addRibbonIcon(
-			'dice-5',
-			'Open cribbage tracker',
-			() => {
-				void this.activateView();
-			},
-		);
+		this.addRibbonIcon('dice-5', 'Open cribbage tracker', () => {
+			void this.activateView();
+		});
 
 		this.addCommand({
 			id: 'open-cribbage-tracker',
@@ -53,12 +39,7 @@ export default class CribbageTrackerPlugin extends Plugin {
 			},
 		});
 
-		this.addSettingTab(
-			new CribbageTrackerSettingTab(
-				this.app,
-				this,
-			),
-		);
+		this.addSettingTab(new CribbageTrackerSettingTab(this.app, this));
 	}
 
 	onunload() {
@@ -67,8 +48,7 @@ export default class CribbageTrackerPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		const savedData =
-			(await this.loadData()) as
-				Partial<CribbageTrackerSettings>;
+			(await this.loadData()) as Partial<CribbageTrackerSettings>;
 
 		this.settings = {
 			...DEFAULT_SETTINGS,
@@ -77,51 +57,35 @@ export default class CribbageTrackerPlugin extends Plugin {
 	}
 
 	async saveSettings(): Promise<void> {
-		await this.saveData(
-			this.settings,
-		);
+		await this.saveData(this.settings);
 	}
 
 	refreshViews(): void {
-		const leaves =
-			this.app.workspace.getLeavesOfType(
-				VIEW_TYPE_CRIBBAGE,
-			);
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CRIBBAGE);
 
 		for (const leaf of leaves) {
 			const view = leaf.view;
 
-			if (
-				view instanceof
-				CribbageTrackerView
-			) {
+			if (view instanceof CribbageTrackerView) {
 				view.render();
 			}
 		}
 	}
 
 	async activateView(): Promise<void> {
-		const { workspace } =
-			this.app;
+		const { workspace } = this.app;
 
-		let leaf =
-			workspace.getLeavesOfType(
-				VIEW_TYPE_CRIBBAGE,
-			)[0];
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_CRIBBAGE)[0];
 
 		if (!leaf) {
-			leaf =
-				workspace.getLeaf('tab');
+			leaf = workspace.getLeaf('tab');
 
 			await leaf.setViewState({
-				type:
-					VIEW_TYPE_CRIBBAGE,
+				type: VIEW_TYPE_CRIBBAGE,
 				active: true,
 			});
 		}
 
-		await workspace.revealLeaf(
-			leaf,
-		);
+		await workspace.revealLeaf(leaf);
 	}
 }

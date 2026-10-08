@@ -2,11 +2,11 @@ import { ItemView, WorkspaceLeaf } from 'obsidian';
 
 import type { CribbageTrackerPluginContext } from './plugin-context';
 
-import { renderGamesPage } from './games-ui';
+import { renderGamesPage } from './games-ui/games-ui';
 
-import type { GamesPageState } from './games-ui';
+import type { GamesPageState } from './games-ui/games-ui';
 
-import { renderHandsPage } from './hands-ui';
+import { renderHandsPage } from './hands-ui/hands-ui';
 
 import { renderStatisticsPage } from './statistics/ui';
 

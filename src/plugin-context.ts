@@ -1,6 +1,6 @@
 import type { App } from 'obsidian';
 
-import type { CribbageDatabase } from './database';
+import type { CribbageDatabase } from './database/database';
 
 import type { CribbageTrackerSettings } from './settings';
 

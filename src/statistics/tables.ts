@@ -1,10 +1,6 @@
-import type {
-	GameStatisticsRecord,
-} from './database';
+import type { GameStatisticsRecord } from '../database';
 
-import type {
-	HighHandWinObservation,
-} from './statistics-types';
+import type { HighHandWinObservation } from './types';
 
 import {
 	effectiveHighHand,
@@ -13,7 +9,7 @@ import {
 	getPlayerSide,
 	hasCompletedScore,
 	formatShare,
-} from './statistics-utils';
+} from './utils';
 
 export function buildHighHandWinObservations(
 	games: GameStatisticsRecord[],
@@ -78,7 +74,8 @@ export function buildHighHandWinObservations(
 		}
 
 		const playerScore = side === 1 ? game.player1Score : game.player2Score;
-		const opponentScore = side === 1 ? game.player2Score : game.player1Score;
+		const opponentScore =
+			side === 1 ? game.player2Score : game.player1Score;
 
 		if (playerScore === null || opponentScore === null) {
 			continue;
@@ -191,7 +188,9 @@ export function renderHighHandWinTable(
 	}
 
 	for (const bucket of rows) {
-		const exact = observations.filter((item) => bucket.matches(item.highHand));
+		const exact = observations.filter((item) =>
+			bucket.matches(item.highHand),
+		);
 		const cumulative = observations.filter((item) =>
 			bucket.cumulative(item.highHand),
 		);

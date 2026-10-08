@@ -1,18 +1,12 @@
-import type {
-	CribbageTrackerPluginContext,
-} from './plugin-context';
-
+import type { CribbageTrackerPluginContext } from '../plugin-context';
 
 import {
 	renderGlobalStats,
 	renderMatchupStats,
 	renderPlayerStats,
-} from './statistics-renderers';
+} from './renderers';
 
-import {
-	createPlayerSelect,
-	createSelectField,
-} from './statistics-utils';
+import { createPlayerSelect, createSelectField } from './utils';
 
 export function renderStatisticsPage(
 	container: HTMLElement,
@@ -112,4 +106,3 @@ export function renderStatisticsPage(
 
 	renderResults();
 }
-

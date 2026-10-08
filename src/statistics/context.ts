@@ -1,13 +1,11 @@
-import type {
-	GameStatisticsRecord,
-} from './database';
+import type { GameStatisticsRecord } from '../database';
 
 import type {
 	ContextRecordOccurrence,
 	ContextStreakOccurrence,
 	SkunkContextOccurrence,
 	StatisticContext,
-} from './statistics-types';
+} from './types';
 
 import {
 	effectiveHighHand,
@@ -16,7 +14,7 @@ import {
 	hasCompletedScore,
 	getPlayerSide,
 	formatDate,
-} from './statistics-utils';
+} from './utils';
 
 export function calculateStatisticContext(
 	games: GameStatisticsRecord[],
@@ -76,8 +74,10 @@ export function calculateStatisticContext(
 				continue;
 			}
 
-			const playerScore = side === 1 ? game.player1Score : game.player2Score;
-			const opponentScore = side === 1 ? game.player2Score : game.player1Score;
+			const playerScore =
+				side === 1 ? game.player1Score : game.player2Score;
+			const opponentScore =
+				side === 1 ? game.player2Score : game.player1Score;
 
 			if (playerScore === null || opponentScore === null) {
 				continue;
@@ -114,7 +114,10 @@ export function calculateStatisticContext(
 		player === null
 			? Array.from(
 					new Set(
-						relevant.flatMap((game) => [game.player1, game.player2]),
+						relevant.flatMap((game) => [
+							game.player1,
+							game.player2,
+						]),
 					),
 				)
 			: [player];
@@ -150,28 +153,36 @@ export function calculateStatisticContext(
 		player === null
 			? undefined
 			: latestSkunkOccurrence(
-					normalSkunks.filter((occurrence) => occurrence.winner === player),
+					normalSkunks.filter(
+						(occurrence) => occurrence.winner === player,
+					),
 				);
 
 	const playerSkunkLoss =
 		player === null
 			? undefined
 			: latestSkunkOccurrence(
-					normalSkunks.filter((occurrence) => occurrence.loser === player),
+					normalSkunks.filter(
+						(occurrence) => occurrence.loser === player,
+					),
 				);
 
 	const playerDoubleSkunkWin =
 		player === null
 			? undefined
 			: latestSkunkOccurrence(
-					doubleSkunks.filter((occurrence) => occurrence.winner === player),
+					doubleSkunks.filter(
+						(occurrence) => occurrence.winner === player,
+					),
 				);
 
 	const playerDoubleSkunkLoss =
 		player === null
 			? undefined
 			: latestSkunkOccurrence(
-					doubleSkunks.filter((occurrence) => occurrence.loser === player),
+					doubleSkunks.filter(
+						(occurrence) => occurrence.loser === player,
+					),
 				);
 
 	return {
@@ -196,11 +207,21 @@ export function calculateStatisticContext(
 
 		skunkWin: formatPlayerSkunkContext(playerSkunkWin, true, false),
 		skunkLoss: formatPlayerSkunkContext(playerSkunkLoss, false, false),
-		doubleSkunkWin: formatPlayerSkunkContext(playerDoubleSkunkWin, true, true),
-		doubleSkunkLoss: formatPlayerSkunkContext(playerDoubleSkunkLoss, false, true),
+		doubleSkunkWin: formatPlayerSkunkContext(
+			playerDoubleSkunkWin,
+			true,
+			true,
+		),
+		doubleSkunkLoss: formatPlayerSkunkContext(
+			playerDoubleSkunkLoss,
+			false,
+			true,
+		),
 
 		globalSkunkGame: formatGlobalSkunkContext(latestGlobalSkunk),
-		globalDoubleSkunkGame: formatGlobalSkunkContext(latestGlobalDoubleSkunk),
+		globalDoubleSkunkGame: formatGlobalSkunkContext(
+			latestGlobalDoubleSkunk,
+		),
 	};
 }
 
@@ -275,7 +296,8 @@ export function buildContextStreakOccurrences(
 		}
 
 		const playerScore = side === 1 ? game.player1Score : game.player2Score;
-		const opponentScore = side === 1 ? game.player2Score : game.player1Score;
+		const opponentScore =
+			side === 1 ? game.player2Score : game.player1Score;
 
 		if (
 			playerScore === null ||
@@ -313,7 +335,9 @@ export function selectLongestStreakOccurrences(
 	occurrences: ContextStreakOccurrence[],
 	type: 'W' | 'L',
 ): ContextStreakOccurrence[] {
-	const matching = occurrences.filter((occurrence) => occurrence.type === type);
+	const matching = occurrences.filter(
+		(occurrence) => occurrence.type === type,
+	);
 
 	if (matching.length === 0) {
 		return [];
@@ -344,7 +368,9 @@ export function formatRecordContext(
 	const players = new Set(occurrences.map((occurrence) => occurrence.player));
 
 	if (players.size === 1) {
-		const latest = [...occurrences].sort(compareContextRecordsNewestFirst)[0]!;
+		const latest = [...occurrences].sort(
+			compareContextRecordsNewestFirst,
+		)[0]!;
 		const context = `Last: vs ${latest.opponent} on ${formatDate(latest.playedDate)}`;
 
 		return includePlayer ? `${latest.player} • ${context}` : context;
@@ -371,7 +397,9 @@ export function formatStreakContext(
 	const players = new Set(occurrences.map((occurrence) => occurrence.player));
 
 	if (players.size === 1) {
-		const latest = [...occurrences].sort(compareContextStreaksNewestFirst)[0]!;
+		const latest = [...occurrences].sort(
+			compareContextStreaksNewestFirst,
+		)[0]!;
 		const context = `Last: ${formatContextStreakDateRange(latest)}`;
 
 		return includePlayer ? `${latest.player} • ${context}` : context;
@@ -425,14 +453,11 @@ function compareContextStreaksNewestFirst(
 	b: ContextStreakOccurrence,
 ): number {
 	return (
-		b.endDate.localeCompare(a.endDate) ||
-		b.endTime.localeCompare(a.endTime)
+		b.endDate.localeCompare(a.endDate) || b.endTime.localeCompare(a.endTime)
 	);
 }
 
-function formatContextStreakDateRange(
-	streak: ContextStreakOccurrence,
-): string {
+function formatContextStreakDateRange(streak: ContextStreakOccurrence): string {
 	return `${formatDate(streak.startDate)} - ${formatDate(streak.endDate)}`;
 }
 
@@ -454,7 +479,9 @@ export function buildSkunkContextOccurrences(
 		const winner = player1Won ? game.player1 : game.player2;
 		const loser = player1Won ? game.player2 : game.player1;
 
-		const winnerScore = player1Won ? game.player1Score! : game.player2Score!;
+		const winnerScore = player1Won
+			? game.player1Score!
+			: game.player2Score!;
 		const loserScore = player1Won ? game.player2Score! : game.player1Score!;
 
 		if (loserScore > 90) {
@@ -538,7 +565,9 @@ export function calculateGlobalStreakSummary(
 		occurrences.push(...buildContextStreakOccurrences(games, player));
 	}
 
-	const matching = occurrences.filter((occurrence) => occurrence.type === type);
+	const matching = occurrences.filter(
+		(occurrence) => occurrence.type === type,
+	);
 
 	if (matching.length === 0) {
 		return {
@@ -551,6 +580,7 @@ export function calculateGlobalStreakSummary(
 
 	return {
 		length,
-		count: matching.filter((occurrence) => occurrence.length === length).length,
+		count: matching.filter((occurrence) => occurrence.length === length)
+			.length,
 	};
 }

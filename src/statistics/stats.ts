@@ -1,7 +1,4 @@
-import type {
-	GameStatisticsRecord,
-	HandStatisticsRecord,
-} from './database';
+import type { GameStatisticsRecord, HandStatisticsRecord } from '../database';
 
 import type {
 	ContextRecordOccurrence,
@@ -9,7 +6,7 @@ import type {
 	PlayerStats,
 	ScopedExtraStats,
 	ScopedRecordStat,
-} from './statistics-types';
+} from './types';
 
 import {
 	formatDate,
@@ -22,12 +19,9 @@ import {
 	hasCompletedScore,
 	getPlayerSide,
 	average,
-} from './statistics-utils';
+} from './utils';
 
-import {
-	selectExtremeRecordOccurrences,
-	formatRecordContext,
-} from './statistics-context';
+import { selectExtremeRecordOccurrences, formatRecordContext } from './context';
 
 export function calculateScopedExtraStats(
 	games: GameStatisticsRecord[],
@@ -89,16 +83,16 @@ export function calculateScopedExtraStats(
 			}
 
 			const eligibleHands = gameHands.filter((hand) => {
-				const {
-					player1HandEligible,
-					player2HandEligible,
-				} = getEffectiveHandEligibility(hand);
+				const { player1HandEligible, player2HandEligible } =
+					getEffectiveHandEligibility(hand);
 
 				const eligible =
 					side === 1 ? player1HandEligible : player2HandEligible;
 
 				const points =
-					side === 1 ? hand.player1HandPoints : hand.player2HandPoints;
+					side === 1
+						? hand.player1HandPoints
+						: hand.player2HandPoints;
 
 				return eligible && typeof points === 'number';
 			});
@@ -237,10 +231,7 @@ export function calculateScopedExtraStats(
 
 			if (
 				deficit > 0 &&
-				(
-					player === null ||
-					getPlayerSide(game, player) === winningSide
-				)
+				(player === null || getPlayerSide(game, player) === winningSide)
 			) {
 				addContextOccurrence(
 					deficitOccurrences,
@@ -444,7 +435,9 @@ function summarizeGameLength(
 	const extreme =
 		direction === 'maximum' ? Math.max(...values) : Math.min(...values);
 
-	const matches = occurrences.filter((occurrence) => occurrence.value === extreme);
+	const matches = occurrences.filter(
+		(occurrence) => occurrence.value === extreme,
+	);
 
 	return {
 		value: extreme,
@@ -477,7 +470,8 @@ function formatGameLengthContext(
 			: `Last: ${matchup} on ${date}`;
 	}
 
-	const opponent = latest.player1 === player ? latest.player2 : latest.player1;
+	const opponent =
+		latest.player1 === player ? latest.player2 : latest.player1;
 
 	return occurrences.length === 1
 		? `vs ${opponent} on ${date}`
@@ -579,7 +573,8 @@ export function calculatePlayerStats(
 		}
 
 		const playerScore = side === 1 ? game.player1Score : game.player2Score;
-		const opponentScore = side === 1 ? game.player2Score : game.player1Score;
+		const opponentScore =
+			side === 1 ? game.player2Score : game.player1Score;
 
 		if (playerScore === null || opponentScore === null) {
 			continue;
@@ -758,7 +753,8 @@ function calculatePlayerStreaks(
 		}
 
 		const playerScore = side === 1 ? game.player1Score : game.player2Score;
-		const opponentScore = side === 1 ? game.player2Score : game.player1Score;
+		const opponentScore =
+			side === 1 ? game.player2Score : game.player1Score;
 
 		if (
 			playerScore === null ||
@@ -792,7 +788,9 @@ function calculatePlayerStreaks(
 	};
 }
 
-export function calculateGlobalHighHandExtremes(games: GameStatisticsRecord[]): {
+export function calculateGlobalHighHandExtremes(
+	games: GameStatisticsRecord[],
+): {
 	highestHighHandInLoss: number | null;
 	highestHighHandInLossCount: number;
 	lowestHighHandInWin: number | null;

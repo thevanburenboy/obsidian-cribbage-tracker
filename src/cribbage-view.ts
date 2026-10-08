@@ -1,38 +1,20 @@
-import {
-	ItemView,
-	WorkspaceLeaf,
-} from 'obsidian';
+import { ItemView, WorkspaceLeaf } from 'obsidian';
 
-import type {
-	CribbageTrackerPluginContext,
-} from './plugin-context';
+import type { CribbageTrackerPluginContext } from './plugin-context';
 
-import {
-	renderGamesPage,
-} from './games-ui';
+import { renderGamesPage } from './games-ui';
 
-import type {
-	GamesPageState,
-} from './games-ui';
+import type { GamesPageState } from './games-ui';
 
-import {
-	renderHandsPage,
-} from './hands-ui';
+import { renderHandsPage } from './hands-ui';
 
-import {
-	renderStatisticsPage,
-} from './statistics-ui';
+import { renderStatisticsPage } from './statistics/ui';
 
-import {
-	renderCustomMetricsPage,
-} from './custom-metrics-ui';
+import { renderCustomMetricsPage } from './custom-metrics/ui';
 
-import {
-	renderLeaderboardPage,
-} from './leaderboard-ui';
+import { renderLeaderboardPage } from './leaderboard/ui';
 
-export const VIEW_TYPE_CRIBBAGE =
-	'cribbage-tracker-view';
+export const VIEW_TYPE_CRIBBAGE = 'cribbage-tracker-view';
 
 export type CribbagePage =
 	| 'games'
@@ -88,56 +70,29 @@ export class CribbageTrackerView extends ItemView {
 		this.renderActivePage(contentEl);
 	}
 
-	private renderHeader(
-		container: HTMLElement,
-	): void {
-		const header =
-			container.createDiv(
-				'cribbage-header',
-			);
+	private renderHeader(container: HTMLElement): void {
+		const header = container.createDiv('cribbage-header');
 
 		header.createEl('h1', {
 			text: 'Cribbage tracker',
 		});
 
 		header.createDiv({
-			text:
-				`${this.plugin.database.getGameCount()} games`,
+			text: `${this.plugin.database.getGameCount()} games`,
 			cls: 'cribbage-game-count',
 		});
 	}
 
-	private renderNavigation(
-		container: HTMLElement,
-	): void {
-		const navigation =
-			container.createDiv(
-				'cribbage-navigation',
-			);
+	private renderNavigation(container: HTMLElement): void {
+		const navigation = container.createDiv('cribbage-navigation');
 
-		this.createNavigationButton(
-			navigation,
-			'Games',
-			'games',
-		);
+		this.createNavigationButton(navigation, 'Games', 'games');
 
-		this.createNavigationButton(
-			navigation,
-			'Hands',
-			'hands',
-		);
+		this.createNavigationButton(navigation, 'Hands', 'hands');
 
-		this.createNavigationButton(
-			navigation,
-			'Statistics',
-			'statistics',
-		);
+		this.createNavigationButton(navigation, 'Statistics', 'statistics');
 
-		this.createNavigationButton(
-			navigation,
-			'Leaderboard',
-			'leaderboard',
-		);
+		this.createNavigationButton(navigation, 'Leaderboard', 'leaderboard');
 
 		this.createNavigationButton(
 			navigation,
@@ -151,67 +106,52 @@ export class CribbageTrackerView extends ItemView {
 		label: string,
 		page: CribbagePage,
 	): void {
-		const button =
-			container.createEl('button', {
-				text: label,
-			});
+		const button = container.createEl('button', {
+			text: label,
+		});
 
 		if (this.activePage === page) {
 			button.addClass('mod-cta');
 		}
 
-		button.addEventListener(
-			'click',
-			() => {
-				this.activePage = page;
-				this.render();
-			},
-		);
+		button.addEventListener('click', () => {
+			this.activePage = page;
+			this.render();
+		});
 	}
 
-	private renderActivePage(
-		container: HTMLElement,
-	): void {
+	private renderActivePage(container: HTMLElement): void {
 		switch (this.activePage) {
 			case 'games':
-				renderGamesPage(
-					container,
-					this.plugin,
-					this.gamesPageState,
-					{
-						onChanged: () => {
-							this.render();
-						},
-
-						onSortChanged: () => {
-							this.render();
-						},
-
-						onOpenHands: (gameId) => {
-							this.selectedGameId =
-								gameId;
-
-							this.activePage =
-								'hands';
-
-							this.render();
-						},
-
-						onEdit: (gameId) => {
-							this.gamesPageState.editingGameId =
-								gameId;
-
-							this.render();
-						},
-
-						onCancelEdit: () => {
-							this.gamesPageState.editingGameId =
-								null;
-
-							this.render();
-						},
+				renderGamesPage(container, this.plugin, this.gamesPageState, {
+					onChanged: () => {
+						this.render();
 					},
-				);
+
+					onSortChanged: () => {
+						this.render();
+					},
+
+					onOpenHands: (gameId) => {
+						this.selectedGameId = gameId;
+
+						this.activePage = 'hands';
+
+						this.render();
+					},
+
+					onEdit: (gameId) => {
+						this.gamesPageState.editingGameId = gameId;
+
+						this.render();
+					},
+
+					onCancelEdit: () => {
+						this.gamesPageState.editingGameId = null;
+
+						this.render();
+					},
+				});
 
 				break;
 
@@ -221,8 +161,7 @@ export class CribbageTrackerView extends ItemView {
 					this.plugin,
 					this.selectedGameId,
 					(gameId) => {
-						this.selectedGameId =
-							gameId;
+						this.selectedGameId = gameId;
 
 						this.render();
 					},
@@ -234,26 +173,17 @@ export class CribbageTrackerView extends ItemView {
 				break;
 
 			case 'statistics':
-				renderStatisticsPage(
-					container,
-					this.plugin,
-				);
+				renderStatisticsPage(container, this.plugin);
 
 				break;
 
 			case 'leaderboard':
-				renderLeaderboardPage(
-					container,
-					this.plugin,
-				);
+				renderLeaderboardPage(container, this.plugin);
 
 				break;
 
 			case 'custom-metrics':
-				renderCustomMetricsPage(
-					container,
-					this.plugin,
-				);
+				renderCustomMetricsPage(container, this.plugin);
 
 				break;
 		}

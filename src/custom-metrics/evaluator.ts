@@ -6,7 +6,7 @@ import type {
 	GameStatisticsRecord,
     CustomMetricSqlHandObservation,
     HandStatisticsRecord,
-} from './database';
+} from '../database';
 
 type ObservationValue =
 	| number
